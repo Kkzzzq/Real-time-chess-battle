@@ -1,0 +1,583 @@
+/**
+ * Game Page Styles
+ */
+
+.game-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  min-height: calc(100vh - 60px);
+}
+
+.game-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  font-size: 1.2rem;
+  color: var(--color-text-muted);
+}
+
+.game-content {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 832px;
+  margin: 0 auto;
+}
+
+.game-content.four-player {
+  max-width: 1088px;
+}
+
+.game-board-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.game-board-wrapper {
+  position: relative;
+  border: 4px solid #8ed47d;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  background-color: #8ed47d;
+  line-height: 0;
+}
+
+/* Prevent browser touch gestures on the board canvas */
+.game-board-container canvas {
+  touch-action: none;
+}
+
+/* Countdown Overlay */
+.game-countdown-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.game-countdown-number {
+  font-size: 8rem;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  animation: countdown-pulse 1s ease-in-out infinite;
+}
+
+@keyframes countdown-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.game-board-container {
+  position: relative;
+}
+
+/* Game Sidebar */
+.game-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 280px;
+  flex-shrink: 0;
+}
+
+/* Sidebar toggle - hidden on desktop */
+.game-sidebar-toggle {
+  display: none;
+}
+
+/* On desktop, make wrapper transparent to flex gap */
+.game-sidebar-details {
+  display: contents;
+}
+
+/* Game Info */
+.game-info {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.game-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.game-info-row:last-child {
+  margin-bottom: 0;
+}
+
+.game-info-label {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  margin-right: 0.5rem;
+}
+
+.game-info-value {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.game-info-player.game-info-value {
+  overflow: visible;
+}
+
+.game-info-player .player-badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 160px;
+  min-width: 0;
+}
+
+.game-info-player .player-badge-name {
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* Copy Link Button */
+.copy-link-button {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-family: var(--font-family);
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
+  transition: all 0.15s;
+}
+
+.copy-link-button:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* Campaign Level Info */
+.campaign-level-info {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.campaign-level-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 0.25rem;
+}
+
+.campaign-level-description {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Game Status */
+.game-status {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.game-status-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.game-status-row:last-child {
+  margin-bottom: 0;
+}
+
+.game-status-label {
+  color: var(--color-text-muted);
+}
+
+.game-status-value {
+  font-weight: 500;
+}
+
+.game-status-error {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background: rgba(248, 113, 113, 0.2);
+  border: 1px solid #f87171;
+  border-radius: 4px;
+  color: #f87171;
+  font-size: 0.875rem;
+}
+
+.game-ready-button {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.game-ready-button:hover {
+  background: var(--color-primary-dark);
+}
+
+/* Action Buttons (Draw + Resign) */
+.game-action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.game-action-buttons > * {
+  flex: 1;
+}
+
+/* Resign Button */
+.resign-button {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  color: #f87171;
+  border: 1px solid #f87171;
+  border-radius: 6px;
+  font-size: 0.925rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.resign-button:hover {
+  background: #f87171;
+  color: white;
+}
+
+/* Draw Offer Button */
+.draw-offer-button {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  color: #60a5fa;
+  border: 1px solid #60a5fa;
+  border-radius: 6px;
+  font-size: 0.925rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.draw-offer-button:hover:not(:disabled) {
+  background: #60a5fa;
+  color: white;
+}
+
+.draw-offer-button.draw-offered {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Resign Confirmation Modal */
+.resign-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.resign-confirm-modal {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 1.5rem 2rem;
+  text-align: center;
+  min-width: 280px;
+}
+
+.resign-confirm-modal p {
+  margin: 0 0 1.25rem;
+  font-size: 1.05rem;
+  color: var(--color-text);
+}
+
+.resign-confirm-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.resign-confirm-yes {
+  padding: 0.5rem 1.25rem;
+  background: #f87171;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.925rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.resign-confirm-yes:hover {
+  background: #ef4444;
+}
+
+.resign-confirm-no {
+  padding: 0.5rem 1.25rem;
+  background: var(--color-surface-light);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 0.925rem;
+  cursor: pointer;
+}
+
+.resign-confirm-no:hover {
+  background: var(--color-border);
+}
+
+/* Game Over Modal */
+.game-over-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.game-over-modal {
+  background: var(--color-background);
+  border: 2px solid var(--color-border);
+  border-radius: 8px;
+  padding: 2rem 3rem;
+  text-align: center;
+  min-width: 300px;
+}
+
+.game-over-modal.win {
+  border-color: #4ade80;
+}
+
+.game-over-modal.lose {
+  border-color: #f87171;
+}
+
+.game-over-modal.draw {
+  border-color: #fbbf24;
+}
+
+.game-over-title {
+  margin: 0 0 0.5rem;
+  font-size: 2rem;
+}
+
+.game-over-modal.win .game-over-title {
+  color: #4ade80;
+}
+
+.game-over-modal.lose .game-over-title {
+  color: #f87171;
+}
+
+.game-over-modal.draw .game-over-title {
+  color: #fbbf24;
+}
+
+.game-over-reason {
+  margin: 0 0 1.5rem;
+  color: var(--color-text-muted);
+}
+
+.game-over-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.game-over-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.game-over-button.primary {
+  background: var(--color-primary);
+  color: white;
+}
+
+.game-over-button.primary:hover {
+  background: var(--color-primary-dark);
+}
+
+.game-over-button.secondary {
+  background: var(--color-surface-light);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.game-over-button.secondary:hover {
+  background: var(--color-border);
+}
+
+/* Responsive - all mobile */
+@media (max-width: 768px) {
+  .game-sidebar {
+    gap: 0.75rem;
+  }
+
+  /* Sidebar toggle button - visible on mobile */
+  .game-sidebar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    color: var(--color-text-muted);
+    font-family: var(--font-family);
+    font-size: 0.925rem;
+    font-weight: 500;
+    letter-spacing: var(--letter-spacing);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .game-sidebar-toggle:hover {
+    background: var(--color-surface);
+  }
+
+  .status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Sidebar details - hidden by default on mobile */
+  .game-sidebar-details {
+    display: none;
+  }
+
+  .game-sidebar-details.expanded {
+    display: contents;
+  }
+
+  /* Modals - constrain width and wrap buttons */
+  .game-over-modal {
+    margin: 1rem;
+    padding: 1.5rem;
+    min-width: 0;
+    max-width: calc(100vw - 2rem);
+    box-sizing: border-box;
+  }
+
+  .game-over-actions {
+    flex-wrap: wrap;
+  }
+
+  .resign-confirm-modal {
+    margin: 1rem;
+    padding: 1.5rem;
+    min-width: 0;
+    max-width: calc(100vw - 2rem);
+    box-sizing: border-box;
+  }
+}
+
+/* Portrait mobile - stack board and sidebar vertically */
+@media (max-width: 768px) and (orientation: portrait) {
+  .game-page {
+    padding: 0;
+    margin: 0 -0.75rem;
+    width: calc(100% + 1.5rem);
+    overflow-x: hidden;
+  }
+
+  .game-content {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  .game-board-area {
+    width: 100%;
+  }
+
+  .game-board-wrapper {
+    border-radius: 0;
+  }
+
+  .game-sidebar {
+    width: 100%;
+    max-width: 512px;
+    padding: 0.75rem;
+  }
+}
+
+/* Landscape mobile - keep sidebar beside board */
+@media (max-width: 768px) and (orientation: landscape) {
+  .game-page {
+    padding: 0.5rem;
+  }
+
+  .game-content {
+    gap: 0.75rem;
+  }
+
+  .game-sidebar {
+    width: 200px;
+    flex-shrink: 0;
+  }
+}
