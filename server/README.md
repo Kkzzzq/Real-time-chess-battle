@@ -1,5 +1,7 @@
-# Kung Fu Chess Server
+# Real-time-chess-battle
 
-Python FastAPI backend for Kung Fu Chess.
+
+Python FastAPI backend for Real-time-chess-battle
+
 
 See the main [README](../README.md) for setup instructions.
