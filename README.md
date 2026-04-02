@@ -1,4 +1,5 @@
-# Kung Fu Chess
+# Real-time-chess-battle
+
 
 A real-time, turn-free chess game where players move pieces simultaneously. Play now at [kfchess.com](https://kfchess.com)!
 
