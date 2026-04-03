@@ -1,8 +1,10 @@
 """Game service for managing active games.
 
-This service handles game creation, state management, and move processing.
-Games are stored in-memory during play, and replays are saved to the database
-when games finish.
+本轮改造以 2 人中国象棋后端为核心，优先保证：
+- 双人对局创建
+- 实时走子与冷却
+- Replay / Snapshot / WebSocket 主链路兼容
+- 关闭四人棋入口，避免规则混用
 """
 
 import asyncio
@@ -19,7 +21,6 @@ if TYPE_CHECKING:
 
 from kfchess.ai.base import AIPlayer
 from kfchess.ai.dummy import DummyAI
-from kfchess.ai.kungfu_ai import KungFuAI
 from kfchess.campaign.board_parser import parse_board_string
 from kfchess.campaign.models import CampaignLevel
 from kfchess.game.board import BoardType
@@ -108,7 +109,7 @@ class GameService:
 
         Args:
             speed: Game speed setting
-            board_type: Type of board (standard or four_player)
+            board_type: 当前只支持 standard
             opponent: Opponent type (e.g., "bot:novice")
 
         Returns:
@@ -130,19 +131,10 @@ class GameService:
         bot_name = opponent.removeprefix("bot:")
         logger.debug(f"Bot name: {bot_name}")
 
-        # Set up players based on board type
-        if board_type == BoardType.STANDARD:
-            players = {1: f"u:{player_key}", 2: f"bot:{bot_name}"}
-            bot_players = [2]
-        else:
-            # 4-player mode: human is player 1, rest are bots
-            players = {
-                1: f"u:{player_key}",
-                2: f"bot:{bot_name}",
-                3: f"bot:{bot_name}",
-                4: f"bot:{bot_name}",
-            }
-            bot_players = [2, 3, 4]
+        if board_type != BoardType.STANDARD:
+            raise ValueError("Real-time-chess-battle 仅支持 standard 双人中国象棋")
+        players = {1: f"u:{player_key}", 2: f"bot:{bot_name}"}
+        bot_players = [2]
 
         logger.debug(f"Creating game state with players: {players}")
 
@@ -416,14 +408,9 @@ class GameService:
         Returns:
             AI player instance
         """
-        if bot_name in self._DIFFICULTY_MAP:
-            level = self._DIFFICULTY_MAP[bot_name]
-            noise = bot_name != "campaign"
-            return KungFuAI(level=level, speed=speed, noise=noise)
-        if bot_name == "dummy":
-            return DummyAI(speed=speed)
-        # Default to novice
-        return KungFuAI(level=1, speed=speed)
+        # 旧版 KungFuAI 深度依赖西洋棋规则；
+        # 本次改造阶段统一退化为 DummyAI，保证后端链路先跑通。
+        return DummyAI(speed=speed)
 
     def get_game(self, game_id: str) -> GameState | None:
         """Get the current game state.
