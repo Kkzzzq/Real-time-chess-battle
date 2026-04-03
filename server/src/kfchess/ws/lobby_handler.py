@@ -493,7 +493,9 @@ async def _create_game_from_lobby(
 
     # Map settings to game parameters
     speed = Speed.LIGHTNING if lobby.settings.speed == "lightning" else Speed.STANDARD
-    board_type = BoardType.FOUR_PLAYER if lobby.settings.player_count == 4 else BoardType.STANDARD
+    if lobby.settings.player_count != 2:
+        raise ValueError("当前版本仅支持 2 人中国象棋房间")
+    board_type = BoardType.STANDARD
 
     # Build player info
     human_player_keys: dict[int, str] = {}
