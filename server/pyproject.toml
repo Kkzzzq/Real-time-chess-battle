@@ -1,7 +1,7 @@
 [project]
-name = "kfchess"
+name = "real-time-chess-battle"
 version = "0.1.0"
-description = "Kung Fu Chess - Real-time multiplayer chess"
+description = "Real-time-chess-battle - 双人实时中国象棋后端"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
