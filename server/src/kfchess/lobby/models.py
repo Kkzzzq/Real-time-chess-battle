@@ -1,4 +1,4 @@
-"""Lobby domain models for Kung Fu Chess.
+"""Lobby domain models for Real-time-chess-battle.
 
 This module contains the core data structures for the lobby system.
 Lobbies are waiting rooms where players gather before starting a game.
@@ -122,8 +122,8 @@ class LobbySettings:
         """Validate settings."""
         if self.speed not in ("standard", "lightning"):
             raise ValueError(f"Invalid speed: {self.speed}")
-        if self.player_count not in (2, 4):
-            raise ValueError(f"Invalid player_count: {self.player_count}")
+        if self.player_count != 2:
+            raise ValueError("当前版本仅支持 2 人中国象棋房间")
 
     def to_redis_dict(self) -> dict[str, Any]:
         """Serialize for Redis storage."""
