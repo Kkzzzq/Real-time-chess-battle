@@ -1,18 +1,35 @@
-"""Piece definitions for Kung Fu Chess."""
+"""Piece definitions for Real-time-chess-battle (中国象棋版)."""
 
 from dataclasses import dataclass, field
 from enum import Enum
 
 
 class PieceType(Enum):
-    """Chess piece types."""
+    """Chinese chess piece types.
+
+    为了减少历史代码的改动成本，这里保留了部分旧枚举名作为别名：
+    - PAWN -> SOLDIER
+    - KNIGHT -> HORSE
+    - BISHOP -> ELEPHANT
+    - ROOK -> CHARIOT
+    - QUEEN -> ADVISOR
+    - KING -> GENERAL
+    """
+
+    SOLDIER = "P"
+    HORSE = "N"
+    ELEPHANT = "E"
+    CHARIOT = "R"
+    ADVISOR = "A"
+    GENERAL = "G"
+    CANNON = "C"
 
     PAWN = "P"
     KNIGHT = "N"
-    BISHOP = "B"
+    BISHOP = "E"
     ROOK = "R"
-    QUEEN = "Q"
-    KING = "K"
+    QUEEN = "A"
+    KING = "G"
 
     def __str__(self) -> str:
         return self.value
@@ -20,16 +37,17 @@ class PieceType(Enum):
 
 @dataclass
 class Piece:
-    """A chess piece on the board.
+    """棋盘上的棋子。
 
     Attributes:
-        id: Unique identifier in format "TYPE:PLAYER:START_ROW:START_COL"
-        type: The piece type (pawn, knight, etc.)
-        player: Player number (1 or 2 for standard, 1-4 for 4-player)
-        row: Current row position (can be float during movement interpolation)
-        col: Current column position (can be float during movement interpolation)
-        captured: Whether the piece has been captured
-        moved: Whether the piece has moved (for castling eligibility)
+        id: 唯一 ID，格式为 "TYPE:PLAYER:START_ROW:START_COL"
+        type: 棋子类型
+        player: 玩家编号（1=红方，2=黑方）
+        row: 当前行坐标（实时移动时可以是浮点）
+        col: 当前列坐标（实时移动时可以是浮点）
+        captured: 是否已被吃掉
+        moved: 是否发生过移动（保留字段，兼容旧协议）
+        cooldown_end_tick: 最近一次冷却结束 tick
     """
 
     id: str
@@ -41,14 +59,12 @@ class Piece:
     moved: bool = False
     cooldown_end_tick: int = 0
 
-    # Cache for grid_position to avoid repeated round() calls
     _grid_cache: tuple[int, int] | None = field(default=None, repr=False, compare=False)
     _grid_cache_row: float = field(default=float("nan"), repr=False, compare=False)
     _grid_cache_col: float = field(default=float("nan"), repr=False, compare=False)
 
     @classmethod
     def create(cls, piece_type: PieceType, player: int, row: int, col: int) -> "Piece":
-        """Create a new piece with auto-generated ID."""
         piece_id = f"{piece_type.value}:{player}:{row}:{col}"
         return cls(
             id=piece_id,
@@ -59,7 +75,6 @@ class Piece:
         )
 
     def copy(self) -> "Piece":
-        """Create a copy of this piece."""
         return Piece(
             id=self.id,
             type=self.type,
@@ -72,7 +87,6 @@ class Piece:
         )
 
     def to_dict(self) -> dict:
-        """Serialize piece to a dictionary for snapshot persistence."""
         return {
             "id": self.id,
             "type": self.type.value,
@@ -86,7 +100,6 @@ class Piece:
 
     @classmethod
     def from_dict(cls, data: dict) -> "Piece":
-        """Deserialize piece from a dictionary."""
         return cls(
             id=data["id"],
             type=PieceType(data["type"]),
@@ -100,19 +113,12 @@ class Piece:
 
     @property
     def position(self) -> tuple[float, float]:
-        """Get the current position as (row, col) tuple."""
         return (self.row, self.col)
 
     @property
     def grid_position(self) -> tuple[int, int]:
-        """Get the current position snapped to grid as (row, col) tuple.
-
-        Cached to avoid repeated round() calls (profiling showed 1.6M calls).
-        """
-        # Check if cache is valid (row/col unchanged)
         if self._grid_cache is not None and self._grid_cache_row == self.row and self._grid_cache_col == self.col:
             return self._grid_cache
-        # Compute and cache
         result = (int(round(self.row)), int(round(self.col)))
         self._grid_cache = result
         self._grid_cache_row = self.row

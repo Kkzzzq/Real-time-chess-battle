@@ -1,4 +1,4 @@
-"""Game engine module for Kung Fu Chess."""
+"""Game engine module for Real-time-chess-battle (中国象棋版)."""
 
 from kfchess.game.board import Board, BoardType
 from kfchess.game.collision import (

@@ -380,8 +380,8 @@ class GameState:
         board = Board(
             pieces=pieces,
             board_type=board_type,
-            width=data.get("board_width", 8 if board_type == BoardType.STANDARD else 12),
-            height=data.get("board_height", 8 if board_type == BoardType.STANDARD else 12),
+            width=data.get("board_width", 9 if board_type == BoardType.STANDARD else 12),
+            height=data.get("board_height", 10 if board_type == BoardType.STANDARD else 12),
         )
 
         started_at = None
