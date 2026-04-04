@@ -5,7 +5,7 @@ import { track } from '../analytics';
 import { staticUrl } from '../config';
 import './Home.css';
 
-type BoardType = 'standard' | 'four_player';
+type BoardType = 'standard';
 type Speed = 'standard' | 'lightning';
 
 function Home() {
@@ -40,7 +40,7 @@ function Home() {
     setIsCreating(true);
 
     try {
-      const playerCount = selectedBoardType === 'four_player' ? 4 : 2;
+      const playerCount = 2;
       const code = await createLobby(
         {
           isPublic: false,
@@ -95,7 +95,7 @@ function Home() {
     }
   };
 
-  const handleCampaign = () => {
+  const handle战役 = () => {
     navigate('/campaign');
   };
 
@@ -139,9 +139,9 @@ function Home() {
             </video>
           </div>
           <div className="home-banner-text">
-            <div className="home-banner-text-main">Chess Without Turns</div>
+            <div className="home-banner-text-main">无回合制中国象棋</div>
             <div className="home-banner-text-sub">
-              The world's most popular strategy game goes real-time.
+              双人同步走子的实时中国象棋体验。
             </div>
           </div>
         </div>
@@ -149,10 +149,10 @@ function Home() {
 
       <div className="home-play-buttons">
         <div className="home-play-button-wrapper">
-          <button className="home-play-button" onClick={handleCampaign}>
-            Campaign
+          <button className="home-play-button" onClick={handle战役}>
+            战役
           </button>
-          <div className="home-play-subtitle">Complete Solo Missions</div>
+          <div className="home-play-subtitle">单人闯关</div>
         </div>
 
         <div className="home-play-button-wrapper">
@@ -161,20 +161,20 @@ function Home() {
             onClick={handlePlayVsAI}
             disabled={isCreating}
           >
-            {isCreating ? 'Creating...' : 'Play vs AI'}
+            {isCreating ? '创建中...' : '与 AI 对弈'}
           </button>
           <div className="home-play-option-wrapper">
             <button
               className={`home-play-option ${speed === 'standard' ? 'selected' : ''}`}
               onClick={() => handleSpeedChange('standard')}
             >
-              Standard
+              标准
             </button>
             <button
               className={`home-play-option ${speed === 'lightning' ? 'selected' : ''}`}
               onClick={() => handleSpeedChange('lightning')}
             >
-              Lightning
+              闪电
             </button>
           </div>
         </div>
@@ -185,20 +185,20 @@ function Home() {
             onClick={handlePlayVsFriend}
             disabled={isCreating}
           >
-            Play vs Friend
+            与好友对弈
           </button>
           <div className="home-play-option-wrapper">
             <button
               className={`home-play-option ${speed === 'standard' ? 'selected' : ''}`}
               onClick={() => handleSpeedChange('standard')}
             >
-              Standard
+              标准
             </button>
             <button
               className={`home-play-option ${speed === 'lightning' ? 'selected' : ''}`}
               onClick={() => handleSpeedChange('lightning')}
             >
-              Lightning
+              闪电
             </button>
           </div>
         </div>
@@ -208,7 +208,7 @@ function Home() {
       {showBoardTypeModal && (
         <div className="modal-overlay" onClick={() => setShowBoardTypeModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Select Board Type</h2>
+            <h2>选择棋盘模式</h2>
             <div className="board-type-options">
               <label className={`board-type-option ${selectedBoardType === 'standard' ? 'selected' : ''}`}>
                 <input
@@ -219,30 +219,17 @@ function Home() {
                   onChange={() => setSelectedBoardType('standard')}
                 />
                 <div className="board-type-info">
-                  <h3>Standard (8x8)</h3>
-                  <p>Classic 2-player chess board</p>
+                  <h3>标准棋盘（9×10）</h3>
+                  <p>双人实时中国象棋棋盘</p>
                 </div>
               </label>
-              <label className={`board-type-option ${selectedBoardType === 'four_player' ? 'selected' : ''}`}>
-                <input
-                  type="radio"
-                  name="boardType"
-                  value="four_player"
-                  checked={selectedBoardType === 'four_player'}
-                  onChange={() => setSelectedBoardType('four_player')}
-                />
-                <div className="board-type-info">
-                  <h3>4-Player (12x12)</h3>
-                  <p>Larger board with cut corners</p>
-                </div>
-              </label>
-            </div>
+                          </div>
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={() => setShowBoardTypeModal(false)}>
-                Cancel
+                取消
               </button>
               <button className="btn btn-primary" onClick={handleStartGame} disabled={isCreating}>
-                {isCreating ? 'Creating...' : 'Start Game'}
+                {isCreating ? '创建中...' : '开始对局'}
               </button>
             </div>
           </div>
@@ -253,7 +240,7 @@ function Home() {
       {showCreateLobbyModal && (
         <div className="modal-overlay" onClick={() => setShowCreateLobbyModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Create Lobby</h2>
+            <h2>创建房间</h2>
             <div className="board-type-options">
               <label className={`board-type-option ${!addAiToLobby ? 'selected' : ''}`}>
                 <input
@@ -263,8 +250,8 @@ function Home() {
                   onChange={() => setAddAiToLobby(false)}
                 />
                 <div className="board-type-info">
-                  <h3>Wait for Player</h3>
-                  <p>Create a lobby and wait for someone to join</p>
+                  <h3>等待玩家</h3>
+                  <p>创建一个房间，等待其他玩家加入</p>
                 </div>
               </label>
               <label className={`board-type-option ${addAiToLobby ? 'selected' : ''}`}>
@@ -275,14 +262,14 @@ function Home() {
                   onChange={() => setAddAiToLobby(true)}
                 />
                 <div className="board-type-info">
-                  <h3>Play vs AI</h3>
-                  <p>Create a lobby with an AI opponent</p>
+                  <h3>与 AI 对弈</h3>
+                  <p>创建一个带 AI 对手的房间</p>
                 </div>
               </label>
             </div>
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={() => setShowCreateLobbyModal(false)}>
-                Cancel
+                取消
               </button>
               <button className="btn btn-primary" onClick={handleCreateLobbySubmit} disabled={isCreatingLobby}>
                 {isCreatingLobby ? 'Creating...' : 'Create Lobby'}

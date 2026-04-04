@@ -193,7 +193,7 @@ export function Replay() {
   if (!gameId || !boardType) {
     return (
       <div className="replay-page">
-        <div className="replay-loading">Loading replay...</div>
+        <div className="replay-loading">正在加载回放...</div>
       </div>
     );
   }
@@ -211,27 +211,27 @@ export function Replay() {
             className="replay-sidebar-toggle"
             onClick={() => setSidebarExpanded((v) => !v)}
           >
-            Replay Info {sidebarExpanded ? '\u25B2' : '\u25BC'}
+            回放信息 {sidebarExpanded ? '\u25B2' : '\u25BC'}
           </button>
           <div className={`replay-sidebar-details${sidebarExpanded ? ' expanded' : ''}`}>
             <div className="replay-info">
-              <h2>Game Replay</h2>
+              <h2>对局回放</h2>
               <div className="replay-info-row">
-                <span className="replay-info-label">Share:</span>
+                <span className="replay-info-label">分享：</span>
                 <button className="copy-link-button" onClick={copyReplayLink}>
-                  {copied ? 'Copied!' : 'Copy Link'}
+                  {copied ? '已复制' : '复制链接'}
                 </button>
               </div>
               {campaignLevelId !== null ? (
                 <div className="replay-info-row">
-                  <span className="replay-info-label">Mode:</span>
+                  <span className="replay-info-label">模式：</span>
                   <span className="replay-info-value">
-                    Campaign Level {campaignLevelId + 1}
+                    战役关卡 {campaignLevelId + 1}
                   </span>
                 </div>
               ) : speed && (
                 <div className="replay-info-row">
-                  <span className="replay-info-label">Mode:</span>
+                  <span className="replay-info-label">模式：</span>
                   <span className="replay-info-value">
                     {speed.charAt(0).toUpperCase() + speed.slice(1)}
                     {isRanked && ' (Rated)'}
@@ -242,7 +242,7 @@ export function Replay() {
                 <>
                   {Object.entries(players).map(([playerNum, player]) => (
                     <div key={playerNum} className="replay-info-row">
-                      <span className="replay-info-label">Player {playerNum}:</span>
+                      <span className="replay-info-label">玩家 {playerNum}:</span>
                       <span className="replay-info-value">
                         <PlayerBadge
                           userId={player.user_id}
@@ -258,7 +258,7 @@ export function Replay() {
               {winner !== null && (
                 <div className="replay-info-row replay-winner">
                   <span className="replay-info-label">Winner:</span>
-                  <span className="replay-info-value">Player {winner}</span>
+                  <span className="replay-info-value">玩家 {winner}</span>
                 </div>
               )}
               {winReason && (

@@ -84,15 +84,15 @@ function Campaign() {
   return (
     <div className="campaign">
       <div className="campaign-header">
-        <h1 className="campaign-title">Campaign Mode</h1>
-        <p className="campaign-subtitle">Complete missions to earn your belts!</p>
+        <h1 className="campaign-title">战役模式</h1>
+        <p className="campaign-subtitle">完成关卡以推进战役进度。</p>
       </div>
 
       {error && (
         <div className="campaign-error" role="alert" aria-live="polite">
           {error}
           <button className="campaign-error-dismiss" onClick={clearError}>
-            Dismiss
+            关闭
           </button>
         </div>
       )}

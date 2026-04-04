@@ -8,11 +8,11 @@ function Privacy() {
   return (
     <div className="privacy-policy">
       <div className="privacy-policy-text">
-        <h1>Privacy Policy of kfchess.com</h1>
-        <p>kfchess.com operates the kfchess.com website, which provides the SERVICE.</p>
+        <h1>Privacy Policy of real-time-chess-battle.example.com</h1>
+        <p>real-time-chess-battle.example.com operates the real-time-chess-battle.example.com website, which provides the SERVICE.</p>
         <p>
           This page is used to inform website visitors regarding our policies with the collection, use, and disclosure
-          of Personal Information if anyone decided to use our Service, the Kung Fu Chess website.
+          of Personal Information if anyone decided to use our Service, the Real-time-chess-battle 网站。
         </p>
         <p>
           If you choose to use our Service, then you agree to the collection and use of information in relation with
@@ -21,7 +21,7 @@ function Privacy() {
         </p>
         <p>
           The terms used in this Privacy Policy have the same meanings as in our Terms and Conditions, which is
-          accessible at kfchess.com, unless otherwise defined in this Privacy Policy.
+          accessible at real-time-chess-battle.example.com, unless otherwise defined in this Privacy Policy.
         </p>
 
         <h2>Information Collection and Use</h2>

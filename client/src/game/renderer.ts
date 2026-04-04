@@ -1,7 +1,7 @@
 /**
  * Game Renderer - PixiJS Board and Piece Rendering
  *
- * Handles all visual rendering of the chess board:
+ * Handles all visual rendering of the xiangqi board:
  * - Board squares (including 4-player corners)
  * - Piece sprites with player color tinting
  * - Selection and legal move highlights
@@ -360,7 +360,7 @@ export class GameRenderer {
         this.piecesContainer.addChild(pieceSprite.container);
       }
 
-      // Update sprite texture and tint if piece type changed (promotion)
+      // Update sprite texture and tint if piece type changed
       this.updatePieceSpriteAppearance(pieceSprite, piece);
 
       // Calculate interpolated position (in game coordinates)
@@ -444,7 +444,7 @@ export class GameRenderer {
   }
 
   /**
-   * Update a piece sprite's appearance (for promotions)
+   * Update a piece sprite's appearance
    */
   private updatePieceSpriteAppearance(pieceSprite: PieceSprite, piece: RendererPiece): void {
     const texture = getPieceTexture(piece.type, piece.player);

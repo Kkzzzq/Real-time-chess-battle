@@ -129,29 +129,29 @@ function LobbySettings({ settings, isHost, disabled, canEnableRated, onUpdate }:
 
   return (
     <div className="lobby-settings">
-      <h3>Game Settings</h3>
+      <h3>对局设置</h3>
       <div className="settings-grid">
         <div className="setting-item">
-          <label>Speed</label>
+          <label>速度</label>
           <select
             value={settings.speed}
             onChange={(e) => onUpdate({ speed: e.target.value as 'standard' | 'lightning' })}
             disabled={!canEdit}
           >
-            <option value="standard">Standard</option>
-            <option value="lightning">Lightning</option>
+            <option value="standard">标准</option>
+            <option value="lightning">闪电</option>
           </select>
         </div>
 
         <div className="setting-item">
-          <label>Players</label>
+          <label>玩家数</label>
           <select
             value={settings.playerCount}
             onChange={(e) => onUpdate({ playerCount: Number(e.target.value) as 2 | 4 })}
             disabled={!canEdit}
           >
-            <option value={2}>2 Players</option>
-            <option value={4}>4 Players</option>
+            <option value={2}>2 玩家数</option>
+            <option value={4}>4 玩家数</option>
           </select>
         </div>
 
@@ -453,10 +453,10 @@ export function Lobby() {
   }
 
   const playerSlots = Array.from({ length: lobby.settings.playerCount }, (_, i) => i + 1);
-  const hasAiPlayers = Object.values(lobby.players).some((p) => p?.isAi);
+  const hasAi玩家数 = Object.values(lobby.players).some((p) => p?.isAi);
   // Rated games require all players to be logged in (not AI and not guests)
-  const hasGuestPlayers = Object.values(lobby.players).some((p) => p && !p.isAi && p.userId === null);
-  const canEnableRated = !hasAiPlayers && !hasGuestPlayers;
+  const hasGuest玩家数 = Object.values(lobby.players).some((p) => p && !p.isAi && p.userId === null);
+  const canEnableRated = !hasAi玩家数 && !hasGuest玩家数;
 
   return (
     <div className="lobby-page">
@@ -497,7 +497,7 @@ export function Lobby() {
 
         <div className="player-slots">
           <div className="slots-header">
-            <h3>Players</h3>
+            <h3>玩家数</h3>
             {isHost && (
               <button
                 className="btn btn-sm btn-secondary"

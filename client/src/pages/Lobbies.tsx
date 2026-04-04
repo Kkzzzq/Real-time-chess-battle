@@ -203,7 +203,7 @@ export function Lobbies() {
           className="refresh-btn"
           onClick={handleRefresh}
           disabled={!canRefresh || isLoadingLobbies}
-          title={canRefresh ? 'Refresh lobbies' : 'Wait 10 seconds to refresh'}
+          title={canRefresh ? '刷新房间列表' : '请等待 10 秒后再刷新'}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
@@ -214,18 +214,18 @@ export function Lobbies() {
         </button>
 
         <select value={speedFilter} onChange={(e) => setSpeedFilter(e.target.value)}>
-          <option value="">All Speeds</option>
-          <option value="standard">Standard</option>
-          <option value="lightning">Lightning</option>
+          <option value="">全部速度</option>
+          <option value="standard">标准</option>
+          <option value="lightning">闪电</option>
         </select>
 
         <select
           value={playerCountFilter || ''}
           onChange={(e) => setPlayerCountFilter(e.target.value ? Number(e.target.value) : undefined)}
         >
-          <option value="">All Player Counts</option>
-          <option value="2">2 Players</option>
-          <option value="4">4 Players</option>
+          <option value="">全部人数</option>
+          <option value="2">2 人</option>
+          <option value="4">4 人（未开放）</option>
         </select>
 
         <select

@@ -97,7 +97,7 @@ const LiveGamesTab = forwardRef<LiveGamesTabHandle, LiveGamesTabProps>(function 
           <p>No live games right now.</p>
           <p>Create a lobby to start playing!</p>
           <Link to="/lobbies" className="btn btn-primary">
-            Browse Lobbies
+            浏览房间
           </Link>
         </div>
       )}
@@ -121,7 +121,7 @@ function formatElapsed(startedAt: string | null): string {
 function LiveGameCard({ game }: { game: LiveGameItem }) {
   let modeLabel: string;
   if (game.campaign_level_id !== null && game.campaign_level_id !== undefined) {
-    modeLabel = `Campaign Level ${game.campaign_level_id + 1}`;
+    modeLabel = `战役关卡 ${game.campaign_level_id + 1}`;
   } else if (game.settings.playerCount > 2) {
     modeLabel = `${game.settings.speed} (${game.settings.playerCount}p)`;
   } else {

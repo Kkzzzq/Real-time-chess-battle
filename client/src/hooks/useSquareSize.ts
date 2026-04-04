@@ -18,7 +18,7 @@ export function useSquareSize(
   /** Pass a truthy value that changes when the ref target mounts (e.g. a loaded ID) */
   refReady?: unknown
 ): number {
-  const gridSize = boardType === 'four_player' ? 12 : 8;
+  const gridSize = boardType === 'four_player' ? 9 : 9;
 
   const calc = useCallback(() => {
     const containerWidth = boardAreaRef.current?.clientWidth ?? document.documentElement.clientWidth;

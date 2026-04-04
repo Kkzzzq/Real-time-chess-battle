@@ -27,7 +27,7 @@ import type { RatingChangeData } from '../utils/ratings';
 // Types
 // ============================================
 
-export type PieceType = 'P' | 'N' | 'B' | 'R' | 'Q' | 'K';
+export type PieceType = 'P' | 'N' | 'E' | 'R' | 'A' | 'G' | 'C' | 'B' | 'Q' | 'K';
 
 export interface Piece {
   id: string;
@@ -38,7 +38,7 @@ export interface Piece {
   captured: boolean;
   moving: boolean;
   onCooldown: boolean;
-  moved: boolean; // Whether the piece has moved (for castling)
+  moved: boolean; // 是否移动过（为兼容旧协议保留）
 }
 
 export interface ActiveMove {

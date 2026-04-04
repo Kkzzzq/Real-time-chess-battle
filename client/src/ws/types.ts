@@ -10,11 +10,11 @@ export interface WsPieceState {
   row: number;
   col: number;
   captured: boolean;
-  type?: 'P' | 'N' | 'B' | 'R' | 'Q' | 'K';
+  type?: 'P' | 'N' | 'E' | 'R' | 'A' | 'G' | 'C' | 'B' | 'Q' | 'K';
   player?: number;
   moving?: boolean;
   on_cooldown?: boolean;
-  moved?: boolean; // Whether piece has moved (for castling)
+  moved?: boolean; // 是否移动过（为兼容旧协议保留）
 }
 
 // Active move in WebSocket messages
@@ -42,7 +42,7 @@ export interface WsCaptureEvent {
 export interface WsPromotionEvent {
   type: 'promotion';
   piece_id: string;
-  to_type: 'Q';
+  to_type: 'A' | 'G' | 'R' | 'N' | 'E' | 'C' | 'P';
   tick: number;
 }
 
@@ -89,7 +89,7 @@ export interface GameStartedMessage {
 export interface GameOverMessage {
   type: 'game_over';
   winner: number; // 0 for draw, 1-4 for player
-  reason: 'king_captured' | 'draw_timeout' | 'resignation' | 'draw';
+  reason: 'king_captured' | 'general_captured' | 'draw_timeout' | 'resignation' | 'draw';
 }
 
 export interface RatingChangePayload {

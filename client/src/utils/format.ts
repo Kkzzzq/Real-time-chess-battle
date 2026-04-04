@@ -13,14 +13,15 @@ import { TIMING } from '../game/constants';
 export function formatWinReason(reason: string | null): string {
   if (!reason) return '';
   switch (reason) {
+    case 'general_captured':
     case 'king_captured':
-      return 'King captured';
+      return '将/帅被吃';
     case 'resignation':
-      return 'Resignation';
+      return '认输';
     case 'draw':
-      return 'Draw';
+      return '平局';
     case 'invalid':
-      return 'Abandoned';
+      return '异常结束';
     default: {
       // Capitalize first letter and replace underscores with spaces
       const formatted = reason.replace(/_/g, ' ');
@@ -49,7 +50,7 @@ export function formatDuration(ticks: number): string {
  * @returns Formatted date and time string
  */
 export function formatDate(dateStr: string | null): string {
-  if (!dateStr) return 'Unknown';
+  if (!dateStr) return '未知';
   // Backend stores UTC but serializes without timezone suffix.
   // Append "Z" so JavaScript interprets the timestamp as UTC, not local time.
   const normalized = dateStr.endsWith('Z') || dateStr.includes('+') || dateStr.includes('-', 10)

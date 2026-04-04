@@ -1,31 +1,39 @@
+
 /**
- * Sprite Sheet Definitions and Loader
+ * Sprite loader for Real-time-chess-battle（中国象棋）.
  *
- * The chess-sprites.png contains pieces in a 6x2 layout:
- * - Top row: outline pieces (white style) - Pawn, Knight, Bishop, Rook, Queen, King
- * - Bottom row: filled pieces (black style) - Pawn, Knight, Bishop, Rook, Queen, King
- *
- * Note: The sprites are NOT in a uniform grid - each has specific pixel coordinates.
- *
- * For 4-player support, we use the filled (black) pieces and tint them:
- * - Player 1: White tint (0xFFFFFF)
- * - Player 2: Black/dark grey (0x1A1A1A)
- * - Player 3: Red tint (0xE63946)
- * - Player 4: Blue tint (0x457B9D)
+ * 当前继续复用旧 sprite sheet 作为临时占位纹理：
+ * - 兵/卒 -> Pawn
+ * - 马 -> Knight
+ * - 象 -> Bishop
+ * - 车 -> Rook
+ * - 士 -> Queen
+ * - 将/帅 -> King
+ * - 炮 -> Rook（临时占位）
  */
 
 import { Assets, Texture, Rectangle } from 'pixi.js';
 import chessSpritesUrl from '../assets/chess-sprites.png';
 
-// Piece types
-export type PieceType = 'P' | 'N' | 'B' | 'R' | 'Q' | 'K';
+export type PieceType = 'P' | 'N' | 'E' | 'R' | 'A' | 'G' | 'C' | 'B' | 'Q' | 'K';
 
-// Sprite coordinates from original implementation
-// Each sprite is 100x100 pixels at specific x,y positions
+type LegacySpriteType = 'P' | 'N' | 'B' | 'R' | 'Q' | 'K';
+
+const PIECE_TEXTURE_MAP: Record<PieceType, LegacySpriteType> = {
+  P: 'P',
+  N: 'N',
+  E: 'B',
+  R: 'R',
+  A: 'Q',
+  G: 'K',
+  C: 'R',
+  B: 'B',
+  Q: 'Q',
+  K: 'K',
+};
+
 const SPRITE_SIZE = 100;
-
-// Outline pieces (top row) - white sprites for player 1
-const OUTLINE_SPRITE_COORDS: Record<PieceType, { x: number; y: number }> = {
+const OUTLINE_SPRITE_COORDS: Record<LegacySpriteType, { x: number; y: number }> = {
   P: { x: 45, y: 19 },
   N: { x: 145, y: 15 },
   B: { x: 248, y: 16 },
@@ -33,9 +41,7 @@ const OUTLINE_SPRITE_COORDS: Record<PieceType, { x: number; y: number }> = {
   Q: { x: 445, y: 13 },
   K: { x: 545, y: 15 },
 };
-
-// Filled pieces (bottom row) - black sprites for players 2-4 (tinted for 3-4)
-const FILLED_SPRITE_COORDS: Record<PieceType, { x: number; y: number }> = {
+const FILLED_SPRITE_COORDS: Record<LegacySpriteType, { x: number; y: number }> = {
   P: { x: 45, y: 117 },
   N: { x: 145, y: 115 },
   B: { x: 248, y: 115 },
@@ -44,78 +50,50 @@ const FILLED_SPRITE_COORDS: Record<PieceType, { x: number; y: number }> = {
   K: { x: 545, y: 115 },
 };
 
-// Player colors for tinting
 export const PLAYER_COLORS: Record<number, number> = {
-  1: 0xffffff, // White
-  2: 0x1a1a1a, // Black
-  3: 0xe63946, // Red
-  4: 0x457b9d, // Blue
+  1: 0xc62828,
+  2: 0x1a1a1a,
+  3: 0xe63946,
+  4: 0x457b9d,
 };
 
-// Sprite textures storage
 const spriteTextures: Map<string, Texture> = new Map();
 let loaded = false;
 
-/**
- * Get the texture key for a piece type and style
- */
-function getTextureKey(pieceType: PieceType, style: 'outline' | 'filled'): string {
+function getTextureKey(pieceType: LegacySpriteType, style: 'outline' | 'filled'): string {
   return `piece_${pieceType}_${style}`;
 }
 
-/**
- * Load the sprite sheet and extract individual piece textures
- */
 export async function loadSprites(): Promise<void> {
   if (loaded) return;
-
-  // Load the sprite sheet image
   const texture = await Assets.load<Texture>(chessSpritesUrl);
   const baseTexture = texture.source;
-
-  // Extract textures for each piece type - both outline and filled styles
   for (const [pieceType, coords] of Object.entries(OUTLINE_SPRITE_COORDS)) {
     const frame = new Rectangle(coords.x, coords.y, SPRITE_SIZE, SPRITE_SIZE);
-    const pieceTexture = new Texture({ source: baseTexture, frame });
-    spriteTextures.set(getTextureKey(pieceType as PieceType, 'outline'), pieceTexture);
+    spriteTextures.set(getTextureKey(pieceType as LegacySpriteType, 'outline'), new Texture({ source: baseTexture, frame }));
   }
-
   for (const [pieceType, coords] of Object.entries(FILLED_SPRITE_COORDS)) {
     const frame = new Rectangle(coords.x, coords.y, SPRITE_SIZE, SPRITE_SIZE);
-    const pieceTexture = new Texture({ source: baseTexture, frame });
-    spriteTextures.set(getTextureKey(pieceType as PieceType, 'filled'), pieceTexture);
+    spriteTextures.set(getTextureKey(pieceType as LegacySpriteType, 'filled'), new Texture({ source: baseTexture, frame }));
   }
-
   loaded = true;
 }
 
-/**
- * Get the texture for a piece type and player
- * - Player 1: outline (white) sprites - no tint needed
- * - Player 2: filled (black) sprites - no tint needed
- * - Players 3-4: outline sprites with color tinting (red/blue)
- */
 export function getPieceTexture(pieceType: PieceType, player: number = 1): Texture {
-  // Player 2 uses filled black sprites, all others use outline
+  const mapped = PIECE_TEXTURE_MAP[pieceType] ?? 'P';
   const style = player === 2 ? 'filled' : 'outline';
-  const key = getTextureKey(pieceType, style);
+  const key = getTextureKey(mapped, style);
   const texture = spriteTextures.get(key);
   if (!texture) {
-    throw new Error(`Texture not found for piece type: ${pieceType}, style: ${style}. Make sure loadSprites() was called.`);
+    throw new Error(`Texture not found for piece type: ${pieceType}, mapped: ${mapped}.`);
   }
   return texture;
 }
 
-/**
- * Get the tint color for a player
- */
 export function getPlayerTint(player: number): number {
   return PLAYER_COLORS[player] ?? 0xffffff;
 }
 
-/**
- * Check if sprites are loaded
- */
 export function areSpritesLoaded(): boolean {
   return loaded;
 }

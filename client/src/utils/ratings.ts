@@ -66,7 +66,7 @@ export type RatingMode = '2p_standard' | '2p_lightning' | '4p_standard' | '4p_li
 
 /**
  * Format a rating mode key into a display name.
- * e.g., "2p_standard" -> "2-Player Standard"
+ * e.g., "2p_standard" -> "双人标准"
  */
 export function formatModeName(mode: string): string {
   const parts = mode.split('_');
