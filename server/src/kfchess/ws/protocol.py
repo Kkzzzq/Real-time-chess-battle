@@ -47,7 +47,7 @@ class JoinedMessage(BaseModel):
     """Sent when client successfully joins a game via WebSocket."""
 
     type: str = "joined"
-    player_number: int  # 0 = spectator, 1-4 = player
+    player_number: int  # 0 = spectator, 1-2 = player
     tick_rate_hz: int  # Server tick rate for client synchronization
     campaign_level: CampaignLevelInfo | None = None  # Present for campaign games
 
@@ -88,7 +88,7 @@ class GameOverMessage(BaseModel):
 
     type: str = "game_over"
     winner: int  # 0 for draw, 1-4 for player number
-    reason: str  # "king_captured" | "draw_timeout" | "resignation" | "draw"
+    reason: str  # "general_captured" | "draw_timeout" | "resignation" | "draw"
 
 
 class RatingChangeData(BaseModel):

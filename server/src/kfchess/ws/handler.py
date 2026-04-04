@@ -1098,7 +1098,7 @@ async def _run_game_loop(game_id: str) -> None:
 
             # Check if game ended externally (e.g., resignation)
             if state.status == GameStatus.FINISHED:
-                reason = state.win_reason.value if state.win_reason else "king_captured"
+                reason = state.win_reason.value if state.win_reason else "general_captured"
 
                 # Send final state update with all pieces (including captured)
                 # so clients see the king marked as captured
@@ -1291,7 +1291,7 @@ async def _run_game_loop(game_id: str) -> None:
 
             # Check for game over after tick
             if state.status == GameStatus.FINISHED:
-                reason = state.win_reason.value if state.win_reason else "king_captured"
+                reason = state.win_reason.value if state.win_reason else "general_captured"
                 await connection_manager.broadcast(
                     game_id,
                     GameOverMessage(
