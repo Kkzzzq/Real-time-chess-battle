@@ -7,14 +7,14 @@ import { TIMING } from '../game/constants';
 /**
  * Format a win reason for display.
  *
- * @param reason - The win reason from the server (e.g., "king_captured")
+ * @param reason - The win reason from the server (e.g., "general_captured")
  * @returns Human-readable string (e.g., "King captured")
  */
 export function formatWinReason(reason: string | null): string {
   if (!reason) return '';
   switch (reason) {
     case 'general_captured':
-    case 'king_captured':
+    case 'general_captured':
       return '将/帅被吃';
     case 'resignation':
       return '认输';
