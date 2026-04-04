@@ -66,7 +66,7 @@ export function GameStatus() {
   const getPlayerLabel = () => {
     if (playerNumber === 0) return 'Spectator';
     const colors = ['', 'White', 'Black', 'Red', 'Blue'];
-    return `Player ${playerNumber} (${colors[playerNumber] || 'Unknown'})`;
+    return `玩家 ${playerNumber} (${colors[playerNumber] || 'Unknown'})`;
   };
 
   const copySpectatorLink = useCallback(() => {
@@ -90,26 +90,26 @@ export function GameStatus() {
 
         {gameId && (
           <div className="game-info-row">
-            <span className="game-info-label">Spectate:</span>
+            <span className="game-info-label">观战链接：</span>
             <button className="copy-link-button" onClick={copySpectatorLink}>
-              {copied ? 'Copied!' : 'Copy Link'}
+              {copied ? '已复制' : '复制链接'}
             </button>
           </div>
         )}
 
         <div className="game-info-row">
-          <span className="game-info-label">Mode:</span>
+          <span className="game-info-label">模式：</span>
           <span className="game-info-value">
             {campaignLevel
-              ? `Campaign Level ${campaignLevel.level_id + 1}`
-              : `${speed.charAt(0).toUpperCase() + speed.slice(1)}${isRanked ? ' (Rated)' : ''}`
+              ? `战役关卡 ${campaignLevel.level_id + 1}`
+              : `${speed.charAt(0).toUpperCase() + speed.slice(1)}${isRanked ? ' （计分）' : ''}`
             }
           </span>
         </div>
 
         {players && Object.entries(players).map(([playerNum, player]) => (
           <div key={playerNum} className="game-info-row">
-            <span className="game-info-label">Player {playerNum}:</span>
+            <span className="game-info-label">玩家 {playerNum}:</span>
             <span className="game-info-value game-info-player">
               <PlayerBadge
                 userId={player.user_id}
@@ -124,19 +124,19 @@ export function GameStatus() {
 
       <div className="game-status">
         <div className="game-status-row">
-          <span className="game-status-label">Status:</span>
+          <span className="game-status-label">状态：</span>
           <span className="game-status-value">{getStatusText()}</span>
         </div>
 
         <div className="game-status-row">
-          <span className="game-status-label">Connection:</span>
+          <span className="game-status-label">连接：</span>
           <span className="game-status-value" style={{ color: getConnectionColor() }}>
             {getConnectionText()}
           </span>
         </div>
 
         <div className="game-status-row">
-          <span className="game-status-label">You are:</span>
+          <span className="game-status-label">你的身份：</span>
           <span className="game-status-value">{getPlayerLabel()}</span>
         </div>
 

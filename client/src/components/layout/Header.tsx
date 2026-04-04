@@ -52,8 +52,8 @@ function Header() {
     }
   }, [showDropdown]);
 
-  const handleLogout = async () => {
-    track('Logout');
+  const handle退出登录 = async () => {
+    track('退出登录');
     setShowDropdown(false);
     await logout();
   };
@@ -76,20 +76,20 @@ function Header() {
   const showVerificationBanner = isAuthenticated && user && !user.isVerified && user.email;
 
   const getButtonText = () => {
-    if (sendingVerification) return 'Sending...';
+    if (sendingVerification) return '发送中...';
     if (verificationSent) {
       return cooldownRemaining > 0
-        ? `Resend available in ${cooldownRemaining}m`
-        : 'Email sent!';
+        ? `剩余 ${cooldownRemaining}m`
+        : '已发送';
     }
-    return 'Resend verification email';
+    return '重新发送验证邮件';
   };
 
   return (
     <>
       {showVerificationBanner && (
         <div className="verification-banner" role="alert">
-          <span>Please verify your email address.</span>
+          <span>请先验证你的邮箱地址。</span>
           <button
             className="btn-link"
             onClick={handleResendVerification}
@@ -104,7 +104,7 @@ function Header() {
           <div className="logo-group">
             <Link to="/" className="logo">
               <span className="logo-img"><img src={staticUrl('logo.png')} alt="" /></span>
-              <span className="logo-text">Kung Fu Chess</span>
+              <span className="logo-text">Real-time-chess-battle</span>
             </Link>
             <a href="https://amplitude.com" target="_blank" rel="noopener noreferrer" className="header-amp" onClick={() => track('Click Amplitude Link')}>
               <span className="header-amp-text">Powered by</span>
@@ -115,24 +115,24 @@ function Header() {
             <nav className="nav">
               <NavLink to="/" end className={({ isActive }) => isActive ? 'nav-link-active' : ''}>Home</NavLink>
               <NavLink to="/lobbies" className={({ isActive }) => isActive ? 'nav-link-active' : ''}>Lobbies</NavLink>
-              <NavLink to="/campaign" className={({ isActive }) => isActive ? 'nav-link-active' : ''}>Campaign</NavLink>
-              <NavLink to="/watch" className={({ isActive }) => isActive ? 'nav-link-active' : ''}>Watch</NavLink>
-              <a href="https://www.reddit.com/r/kfchess/" target="_blank" rel="noopener noreferrer" className="nav-secondary" onClick={() => track('Click Reddit Link')}>Reddit</a>
-              <NavLink to="/about" className={({ isActive }) => `nav-secondary ${isActive ? 'nav-link-active' : ''}`}>About</NavLink>
-              <NavLink to="/privacy" className={({ isActive }) => `nav-secondary ${isActive ? 'nav-link-active' : ''}`}>Privacy</NavLink>
+              <NavLink to="/campaign" className={({ isActive }) => isActive ? 'nav-link-active' : ''}>战役</NavLink>
+              <NavLink to="/watch" className={({ isActive }) => isActive ? 'nav-link-active' : ''}>观战</NavLink>
+              <a href="https://www.reddit.com/r/xiangqi/" target="_blank" rel="noopener noreferrer" className="nav-secondary" onClick={() => track('Click Reddit Link')}>Reddit</a>
+              <NavLink to="/about" className={({ isActive }) => `nav-secondary ${isActive ? 'nav-link-active' : ''}`}>关于</NavLink>
+              <NavLink to="/privacy" className={({ isActive }) => `nav-secondary ${isActive ? 'nav-link-active' : ''}`}>隐私</NavLink>
               {!isLoading && !isAuthenticated && (
-                <NavLink to="/login" className={({ isActive }) => `nav-secondary ${isActive ? 'nav-link-active' : ''}`} onClick={() => track('Click Login')}>Login</NavLink>
+                <NavLink to="/login" className={({ isActive }) => `nav-secondary ${isActive ? 'nav-link-active' : ''}`} onClick={() => track('Click 登录')}>登录</NavLink>
               )}
             </nav>
 
             {isLoading ? (
               <span className="user-loading">...</span>
             ) : isAuthenticated && user ? (
-              /* Authenticated: Profile pic with dropdown containing Profile, Logout, and secondary links */
+              /* Authenticated: 个人资料 pic with dropdown containing 个人资料, 退出登录, and secondary links */
               <div className="header-menu-wrapper" ref={dropdownRef}>
                 <button
                   className="profile-pic-button"
-                  onClick={() => { if (!showDropdown) track('Click Profile Pic'); setShowDropdown(!showDropdown); }}
+                  onClick={() => { if (!showDropdown) track('Click 个人资料 Pic'); setShowDropdown(!showDropdown); }}
                   aria-expanded={showDropdown}
                 >
                   <div className="profile-pic">
@@ -142,28 +142,28 @@ function Header() {
                 {showDropdown && (
                   <div className="header-dropdown">
                     <div className="header-dropdown-option">
-                      <Link to="/profile" onClick={() => setShowDropdown(false)}>Profile</Link>
+                      <Link to="/profile" onClick={() => setShowDropdown(false)}>个人资料</Link>
                     </div>
                     <div className="header-dropdown-option">
-                      <button onClick={handleLogout}>Logout</button>
+                      <button onClick={handle退出登录}>退出登录</button>
                     </div>
                     <div className="header-dropdown-secondary">
                       <div className="header-dropdown-divider"></div>
                       <div className="header-dropdown-option">
-                        <a href="https://www.reddit.com/r/kfchess/" target="_blank" rel="noopener noreferrer" onClick={() => { track('Click Reddit Link'); setShowDropdown(false); }}>Reddit</a>
+                        <a href="https://www.reddit.com/r/xiangqi/" target="_blank" rel="noopener noreferrer" onClick={() => { track('Click Reddit Link'); setShowDropdown(false); }}>Reddit</a>
                       </div>
                       <div className="header-dropdown-option">
-                        <Link to="/about" onClick={() => setShowDropdown(false)}>About</Link>
+                        <Link to="/about" onClick={() => setShowDropdown(false)}>关于</Link>
                       </div>
                       <div className="header-dropdown-option">
-                        <Link to="/privacy" onClick={() => setShowDropdown(false)}>Privacy</Link>
+                        <Link to="/privacy" onClick={() => setShowDropdown(false)}>隐私</Link>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
             ) : (
-              /* Unauthenticated mobile: hamburger with Login + secondary links */
+              /* Unauthenticated mobile: hamburger with 登录 + secondary links */
               <div className="header-menu-wrapper mobile-only" ref={dropdownRef}>
                 <button
                   className="hamburger-button"
@@ -180,17 +180,17 @@ function Header() {
                 {showDropdown && (
                   <div className="header-dropdown">
                     <div className="header-dropdown-option">
-                      <Link to="/login" onClick={() => setShowDropdown(false)}>Login</Link>
+                      <Link to="/login" onClick={() => setShowDropdown(false)}>登录</Link>
                     </div>
                     <div className="header-dropdown-divider"></div>
                     <div className="header-dropdown-option">
-                      <a href="https://www.reddit.com/r/kfchess/" target="_blank" rel="noopener noreferrer" onClick={() => { track('Click Reddit Link'); setShowDropdown(false); }}>Reddit</a>
+                      <a href="https://www.reddit.com/r/xiangqi/" target="_blank" rel="noopener noreferrer" onClick={() => { track('Click Reddit Link'); setShowDropdown(false); }}>Reddit</a>
                     </div>
                     <div className="header-dropdown-option">
-                      <Link to="/about" onClick={() => setShowDropdown(false)}>About</Link>
+                      <Link to="/about" onClick={() => setShowDropdown(false)}>关于</Link>
                     </div>
                     <div className="header-dropdown-option">
-                      <Link to="/privacy" onClick={() => setShowDropdown(false)}>Privacy</Link>
+                      <Link to="/privacy" onClick={() => setShowDropdown(false)}>隐私</Link>
                     </div>
                   </div>
                 )}

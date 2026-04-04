@@ -14,12 +14,10 @@ export default function ReplayCard({ replay }: ReplayCardProps) {
   let modeLabel: string;
   if (replay.campaign_level_id !== null && replay.campaign_level_id !== undefined) {
     // Campaign games show level number (1-indexed for display)
-    modeLabel = `Campaign Level ${replay.campaign_level_id + 1}`;
+    modeLabel = `战役关卡 ${replay.campaign_level_id + 1}`;
   } else {
     // Non-campaign games show speed with modifiers
-    const isFourPlayer = replay.board_type === 'four_player';
     const modifiers: string[] = [];
-    if (isFourPlayer) modifiers.push('4p');
     if (replay.is_ranked) modifiers.push('Rated');
 
     modeLabel = modifiers.length > 0

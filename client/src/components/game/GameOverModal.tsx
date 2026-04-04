@@ -44,29 +44,30 @@ export function GameOverModal() {
 
   const getResultText = () => {
     if (winner === null) {
-      return 'Game Over';
+      return '对局结束';
     }
 
     if (winner === 0) {
-      return 'Draw!';
+      return '平局';
     }
 
     if (winner === playerNumber) {
-      return 'You Win!';
+      return '你赢了';
     }
 
     if (playerNumber === 0) {
-      const colors = ['', 'White', 'Black', 'Red', 'Blue'];
-      return `${colors[winner] || 'Player ' + winner} Wins!`;
+      const colors = ['', 'Red', 'Black'];
+      return `${colors[winner] || '玩家' + winner} 获胜`;
     }
 
-    return 'You Lose';
+    return '你输了';
   };
 
   const getReasonText = () => {
     switch (winReason) {
+      case 'general_captured':
       case 'king_captured':
-        return 'King was captured';
+        return '将/帅被吃';
       case 'draw_timeout':
         return 'Game timed out';
       case 'draw':

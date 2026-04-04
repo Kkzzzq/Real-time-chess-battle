@@ -386,7 +386,7 @@ export function GameBoard({ boardType, squareSize = 64 }: GameBoardProps) {
   }, [isReady]); // Only restart when renderer becomes ready
 
   // Calculate canvas dimensions
-  const boardDims = boardType === 'four_player' ? { width: 12, height: 12 } : { width: 8, height: 8 };
+  const boardDims = boardType === 'four_player' ? { width: 9, height: 10 } : { width: 9, height: 10 };
   const canvasWidth = boardDims.width * squareSize;
   const canvasHeight = boardDims.height * squareSize;
 

@@ -5,14 +5,14 @@
 // Piece representation from server
 export interface ApiPiece {
   id: string;
-  type: 'P' | 'N' | 'B' | 'R' | 'Q' | 'K';
+  type: 'P' | 'N' | 'E' | 'R' | 'A' | 'G' | 'C' | 'B' | 'Q' | 'K';
   player: number;
   row: number;
   col: number;
   captured: boolean;
   moving: boolean;
   on_cooldown: boolean;
-  moved?: boolean; // Whether piece has moved (for castling) - tracked client-side if not sent
+  moved?: boolean; // 是否发生过移动（为旧协议兼容保留）
 }
 
 // Active move representation
