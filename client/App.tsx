@@ -1,0 +1,52 @@
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Layout from './components/layout/Layout';
+import AuthProvider from './components/AuthProvider';
+import Home from './pages/Home';
+import { Game } from './pages/Game';
+import { Replay } from './pages/Replay';
+import { Watch } from './pages/Watch';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import GoogleCallback from './pages/GoogleCallback';
+import LichessCallback from './pages/LichessCallback';
+import Verify from './pages/Verify';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import Profile from './pages/Profile';
+import { Lobby } from './pages/Lobby';
+import { Lobbies } from './pages/Lobbies';
+import About from './pages/About';
+import Privacy from './pages/Privacy';
+import Campaign from './pages/Campaign';
+
+function App() {
+  return (
+    <AuthProvider>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="game/:gameId" element={<Game />} />
+          <Route path="replay/:replayId" element={<Replay />} />
+          <Route path="watch" element={<Watch />} />
+          <Route path="replays" element={<Navigate to="/watch?tab=replays" replace />} />
+          <Route path="login" element={<Login />} />
+          <Route path="register" element={<Register />} />
+          <Route path="auth/google/callback" element={<GoogleCallback />} />
+          <Route path="auth/lichess/callback" element={<LichessCallback />} />
+          <Route path="verify" element={<Verify />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
+          <Route path="reset-password" element={<ResetPassword />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="profile/:userId" element={<Profile />} />
+          <Route path="lobby/:code" element={<Lobby />} />
+          <Route path="lobbies" element={<Lobbies />} />
+          <Route path="about" element={<About />} />
+          <Route path="privacy" element={<Privacy />} />
+          <Route path="campaign" element={<Campaign />} />
+        </Route>
+      </Routes>
+    </AuthProvider>
+  );
+}
+
+export default App;
