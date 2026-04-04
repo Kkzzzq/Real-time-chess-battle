@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     )
 
     # Database
-    database_url: str = "postgresql+asyncpg://kfchess:kfchess@localhost:5432/kfchess"
+    database_url: str = "postgresql+asyncpg://rtcb:rtcb@localhost:5432/real_time_chess_battle"
 
     # Redis
     redis_url: str = "redis://localhost:6379"
@@ -64,13 +64,14 @@ class Settings(BaseSettings):
         """Get server ID for active game tracking.
 
         Resolution order:
-          1. KFCHESS_SERVER_ID env var (set per-process, not in .env)
+          1. RTCB_SERVER_ID env var（新命名，优先）
+          2. KFCHESS_SERVER_ID env var（兼容旧命名）
           2. Fallback: hostname-pid (unique but won't survive restarts)
 
         For multiple processes sharing the same .env, launch each with a
-        stable ID: ``KFCHESS_SERVER_ID=worker1 uvicorn ...``
+        stable ID: ``RTCB_SERVER_ID=worker1 uvicorn ...``
         """
-        from_env = os.environ.get("KFCHESS_SERVER_ID")
+        from_env = os.environ.get("RTCB_SERVER_ID") or os.environ.get("KFCHESS_SERVER_ID")
         if from_env:
             return from_env
         return f"{os.uname().nodename}-{os.getpid()}"

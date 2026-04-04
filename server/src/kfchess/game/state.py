@@ -33,7 +33,7 @@ class WinReason(Enum):
     - INVALID is not rated (abandoned, cancelled, error, etc.)
     """
 
-    KING_CAPTURED = "king_captured"  # A king was captured
+    KING_CAPTURED = "king_captured"  # 对方将/帅被吃
     DRAW = "draw"  # Game ended in a draw (stalemate, simultaneous capture, etc.)
     RESIGNATION = "resignation"  # A player resigned
     INVALID = "invalid"  # Game ended abnormally (abandoned, cancelled, error)
