@@ -66,7 +66,7 @@ export function GameOverModal() {
   const getReasonText = () => {
     switch (winReason) {
       case 'general_captured':
-      case 'king_captured':
+      case 'general_captured':
         return '将/帅被吃';
       case 'draw_timeout':
         return 'Game timed out';
