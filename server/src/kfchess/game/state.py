@@ -1,4 +1,4 @@
-"""Game state management for Kung Fu Chess."""
+"""Game state management for Real-time-chess-battle."""
 
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -33,7 +33,7 @@ class WinReason(Enum):
     - INVALID is not rated (abandoned, cancelled, error, etc.)
     """
 
-    KING_CAPTURED = "king_captured"  # 对方将/帅被吃
+    KING_CAPTURED = "general_captured"  # 对方将/帅被吃
     DRAW = "draw"  # Game ended in a draw (stalemate, simultaneous capture, etc.)
     RESIGNATION = "resignation"  # A player resigned
     INVALID = "invalid"  # Game ended abnormally (abandoned, cancelled, error)
