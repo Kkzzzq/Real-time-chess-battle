@@ -56,17 +56,18 @@ ANIMALS = [
 ]
 
 CHESS_PIECES = [
-    "Pawn",
-    "Knight",
-    "Bishop",
-    "Rook",
-    "Queen",
-    "King",
+    "Soldier",
+    "Horse",
+    "Elephant",
+    "Chariot",
+    "Advisor",
+    "General",
+    "Cannon",
 ]
 
 
 def generate_random_username() -> str:
-    """Generate a random username like 'Mystic Tiger Pawn 12345'.
+    """Generate a random username like 'Mystic Tiger Cannon 12345'.
 
     Returns:
         A random username in the format "Adjective Animal Piece Number"
