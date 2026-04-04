@@ -188,7 +188,7 @@ class GameReplay(Base):
         moves: List of replay moves
         total_ticks: Total game duration in ticks
         winner: Winner (0=draw, 1-4=player number, None=unknown)
-        win_reason: Reason for game end (e.g., "king_captured", "draw_no_moves")
+        win_reason: Reason for game end (e.g., "general_captured", "draw_no_moves")
         created_at: When the game was completed
         is_public: Whether the replay is publicly viewable
     """
