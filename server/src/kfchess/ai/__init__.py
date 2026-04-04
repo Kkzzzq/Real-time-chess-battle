@@ -1,7 +1,10 @@
-"""AI system."""
+"""AI system.
 
-from kfchess.ai.arrival_field import ArrivalData, ArrivalField
-from kfchess.ai.kungfu_ai import KungFuAI
-from kfchess.ai.tactics import capture_value, move_safety
+第一版已冻结旧的西洋棋 AI，统一退化为 DummyAI。
+"""
 
-__all__ = ["ArrivalData", "ArrivalField", "KungFuAI", "capture_value", "move_safety"]
+from kfchess.ai.dummy import DummyAI
+
+KungFuAI = DummyAI
+
+__all__ = ["DummyAI", "KungFuAI"]
