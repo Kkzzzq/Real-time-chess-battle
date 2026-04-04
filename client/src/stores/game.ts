@@ -6,7 +6,7 @@
 
 import { create } from 'zustand';
 import * as api from '../api';
-import type { ApiPiece, ApiActiveMove, ApiCooldown, CreateGameRequest, PlayerDisplay } from '../api/types';
+import type { ApiPiece, ApiActiveMove, ApiCooldown, CreateGameRequest, PlayerDisplay, BoardType } from '../api/types';
 import { GameWebSocketClient } from '../ws/client';
 import type {
   ConnectionState,
@@ -27,7 +27,7 @@ import type { RatingChangeData } from '../utils/ratings';
 // Types
 // ============================================
 
-export type PieceType = 'P' | 'N' | 'E' | 'R' | 'A' | 'G' | 'C' | 'B' | 'Q' | 'K';
+export type PieceType = 'P' | 'N' | 'E' | 'R' | 'A' | 'G' | 'C';
 
 export interface Piece {
   id: string;
@@ -54,14 +54,13 @@ export interface Cooldown {
 }
 
 export type GameStatus = 'waiting' | 'playing' | 'finished';
-export type BoardType = 'standard' | 'four_player';
 export type GameSpeed = 'standard' | 'lightning';
 
 interface GameState {
   // Connection state
   gameId: string | null;
   playerKey: string | null;
-  playerNumber: number; // 0 = spectator, 1-4 = player
+  playerNumber: number; // 0 = spectator, 1-2 = player
   connectionState: ConnectionState;
   boardType: BoardType;
   speed: GameSpeed;
@@ -611,7 +610,7 @@ export const selectCanSelectPiece = (pieceId: string) => (state: GameStore) => {
 export const selectIsPlayerEliminated = (state: GameStore) => {
   if (state.playerNumber === 0) return false; // Spectators can't be eliminated
   const myKing = state.pieces.find(
-    (p) => p.type === 'K' && p.player === state.playerNumber
+    (p) => p.type === 'G' && p.player === state.playerNumber
   );
   return myKing?.captured === true;
 };
