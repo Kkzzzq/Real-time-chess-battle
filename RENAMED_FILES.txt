@@ -1,7 +1,0 @@
-本次新增并建议替换/改名的文件：
-- deploy/kfchess-worker.sh -> deploy/real-time-chess-battle-worker.sh
-- deploy/systemd/kfchess@.service -> deploy/systemd/real-time-chess-battle@.service
-
-说明：
-- 内部 Python 包目录 src/kfchess 暂未重命名，避免 import 链路全面中断。
-- docs/FOUR_PLAYER_DESIGN.md 与 docs/KFCHESS_ORIGINAL_IMPLEMENTATION.md 建议删除或归档，而不是继续沿用。
