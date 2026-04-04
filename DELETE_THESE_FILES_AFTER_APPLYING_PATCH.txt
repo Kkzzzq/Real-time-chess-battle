@@ -1,8 +1,0 @@
-建议删除或重写的文件：
-- docs/FOUR_PLAYER_DESIGN.md
-- docs/KFCHESS_ORIGINAL_IMPLEMENTATION.md
-- deploy/kfchess-worker.sh
-- deploy/systemd/kfchess@.service
-- server/tests/unit/game/test_4player.py
-- server/tests/unit/game/test_board.py
-- server/tests/unit/game/test_moves.py
