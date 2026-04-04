@@ -13,12 +13,12 @@ const MIN_SQUARE_SIZE = 24;
 const BOARD_BORDER_PX = 8; // 4px border on each side
 
 export function useSquareSize(
-  boardType: 'standard' | 'four_player',
+  boardType: 'standard',
   boardAreaRef: RefObject<HTMLDivElement | null>,
   /** Pass a truthy value that changes when the ref target mounts (e.g. a loaded ID) */
   refReady?: unknown
 ): number {
-  const gridSize = boardType === 'four_player' ? 9 : 9;
+  const gridSize = 9;
 
   const calc = useCallback(() => {
     const containerWidth = boardAreaRef.current?.clientWidth ?? document.documentElement.clientWidth;
