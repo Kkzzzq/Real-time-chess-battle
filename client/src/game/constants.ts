@@ -1,7 +1,8 @@
-
 /**
  * Game Constants for Real-time-chess-battle（中国象棋前端）
  */
+
+import type { BoardType } from '../api/types';
 
 export const BOARD_COLORS = {
   light: 0xf5e6c8,
@@ -13,9 +14,8 @@ export const BOARD_COLORS = {
   background: 0xfcf8ef,
 } as const;
 
-export const BOARD_DIMENSIONS = {
+export const BOARD_DIMENSIONS: Record<BoardType, { width: number; height: number }> = {
   standard: { width: 9, height: 10 },
-  four_player: { width: 9, height: 10 },
 } as const;
 
 const TICK_RATE_HZ = 30;
@@ -56,27 +56,16 @@ export function isCornerSquare(_row: number, _col: number): boolean {
   return false;
 }
 
-export function isValidSquare(
-  row: number,
-  col: number,
-  boardType: 'standard' | 'four_player'
-): boolean {
+export function isValidSquare(row: number, col: number, boardType: BoardType = 'standard'): boolean {
   const dims = BOARD_DIMENSIONS[boardType];
   return row >= 0 && row < dims.height && col >= 0 && col < dims.width;
 }
 
-export function getSquareColor(
-  row: number,
-  col: number,
-  _boardType: 'standard' | 'four_player'
-): number {
+export function getSquareColor(row: number, col: number, _boardType: BoardType = 'standard'): number {
   return (row + col) % 2 === 0 ? BOARD_COLORS.light : BOARD_COLORS.dark;
 }
 
-export function getPieceRotation(
-  player: number,
-  _boardType: 'standard' | 'four_player'
-): number {
+export function getPieceRotation(player: number, _boardType: BoardType = 'standard'): number {
   return player === 2 ? Math.PI : 0;
 }
 
@@ -85,11 +74,7 @@ export interface Coords {
   col: number;
 }
 
-export function transformToViewCoords(
-  coords: Coords,
-  playerNumber: number,
-  boardType: 'standard' | 'four_player'
-): Coords {
+export function transformToViewCoords(coords: Coords, playerNumber: number, boardType: BoardType = 'standard'): Coords {
   const { row, col } = coords;
   const dims = BOARD_DIMENSIONS[boardType];
   if (playerNumber === 2) {
@@ -98,11 +83,7 @@ export function transformToViewCoords(
   return { row, col };
 }
 
-export function transformToGameCoords(
-  coords: Coords,
-  playerNumber: number,
-  boardType: 'standard' | 'four_player'
-): Coords {
+export function transformToGameCoords(coords: Coords, playerNumber: number, boardType: BoardType = 'standard'): Coords {
   const { row, col } = coords;
   const dims = BOARD_DIMENSIONS[boardType];
   if (playerNumber === 2) {

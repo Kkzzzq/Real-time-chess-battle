@@ -58,8 +58,8 @@ function generalsFacing(pieces: Piece[], activeMoves: ActiveMove[], movingPiece:
       row = toRow;
       col = toCol;
     }
-    if ((p.type === 'G' || p.type === 'K') && p.player === 1) red = [row, col];
-    if ((p.type === 'G' || p.type === 'K') && p.player === 2) black = [row, col];
+    if (p.type === 'G' && p.player === 1) red = [row, col];
+    if (p.type === 'G' && p.player === 2) black = [row, col];
   }
   if (!red || !black) return false;
   if (red[1] !== black[1]) return false;
@@ -106,7 +106,7 @@ function isAdvisorMove(piece: Piece, toRow: number, toCol: number): boolean {
 
 function isGeneralMove(pieces: Piece[], activeMoves: ActiveMove[], piece: Piece, toRow: number, toCol: number): boolean {
   const target = getPieceAtLocation(pieces, toRow, toCol);
-  if (target && target.player !== piece.player && (target.type === 'G' || target.type === 'K')) {
+  if (target && target.player !== piece.player && target.type === 'G') {
     if (piece.col !== toCol) return false;
     return countLineBlockers(pieces, activeMoves, piece.row, piece.col, toRow, toCol) === 0;
   }
@@ -145,13 +145,10 @@ export function isLegalMove(
   switch (piece.type) {
     case 'P': ok = isSoldierMove(piece, toRow, toCol); break;
     case 'N': ok = isHorseMove(pieces, activeMoves, piece, toRow, toCol); break;
-    case 'E':
-    case 'B': ok = isElephantMove(pieces, activeMoves, piece, toRow, toCol); break;
+    case 'E': ok = isElephantMove(pieces, activeMoves, piece, toRow, toCol); break;
     case 'R': ok = isChariotMove(pieces, activeMoves, piece, toRow, toCol); break;
-    case 'A':
-    case 'Q': ok = isAdvisorMove(piece, toRow, toCol); break;
-    case 'G':
-    case 'K': ok = isGeneralMove(pieces, activeMoves, piece, toRow, toCol); break;
+    case 'A': ok = isAdvisorMove(piece, toRow, toCol); break;
+    case 'G': ok = isGeneralMove(pieces, activeMoves, piece, toRow, toCol); break;
     case 'C': ok = isCannonMove(pieces, activeMoves, piece, toRow, toCol); break;
     default: ok = false;
   }

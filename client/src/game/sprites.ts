@@ -1,22 +1,12 @@
-
 /**
  * Sprite loader for Real-time-chess-battle（中国象棋）.
- *
- * 当前继续复用旧 sprite sheet 作为临时占位纹理：
- * - 兵/卒 -> Pawn
- * - 马 -> Knight
- * - 象 -> Bishop
- * - 车 -> Rook
- * - 士 -> Queen
- * - 将/帅 -> King
- * - 炮 -> Rook（临时占位）
+ * 当前继续复用旧 sprite sheet 作为临时占位纹理。
  */
 
 import { Assets, Texture, Rectangle } from 'pixi.js';
 import chessSpritesUrl from '../assets/chess-sprites.png';
 
-export type PieceType = 'P' | 'N' | 'E' | 'R' | 'A' | 'G' | 'C' | 'B' | 'Q' | 'K';
-
+export type PieceType = 'P' | 'N' | 'E' | 'R' | 'A' | 'G' | 'C';
 type LegacySpriteType = 'P' | 'N' | 'B' | 'R' | 'Q' | 'K';
 
 const PIECE_TEXTURE_MAP: Record<PieceType, LegacySpriteType> = {
@@ -27,9 +17,6 @@ const PIECE_TEXTURE_MAP: Record<PieceType, LegacySpriteType> = {
   A: 'Q',
   G: 'K',
   C: 'R',
-  B: 'B',
-  Q: 'Q',
-  K: 'K',
 };
 
 const SPRITE_SIZE = 100;
@@ -53,8 +40,6 @@ const FILLED_SPRITE_COORDS: Record<LegacySpriteType, { x: number; y: number }> =
 export const PLAYER_COLORS: Record<number, number> = {
   1: 0xc62828,
   2: 0x1a1a1a,
-  3: 0xe63946,
-  4: 0x457b9d,
 };
 
 const spriteTextures: Map<string, Texture> = new Map();

@@ -27,7 +27,7 @@ const PIECE_OFFSET_Y = RENDER.PIECE_OFFSET_Y ?? 0;
 import { interpolatePiecePosition, calculateCooldownProgress, type ActiveMove } from './interpolation';
 
 // Types
-export type BoardType = 'standard' | 'four_player';
+export type BoardType = 'standard';
 
 export interface RendererPiece {
   id: string;
