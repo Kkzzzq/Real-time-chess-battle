@@ -1,23 +1,22 @@
 /**
  * WebSocket Protocol Types
- *
- * Type definitions for WebSocket messages between client and server.
+ * 第一版协议收口为：双人中国象棋（无升变、无四人棋）
  */
 
-// Piece state in WebSocket messages (minimal, for updates)
+export type XiangqiPieceType = 'P' | 'N' | 'E' | 'R' | 'A' | 'G' | 'C';
+
 export interface WsPieceState {
   id: string;
   row: number;
   col: number;
   captured: boolean;
-  type?: 'P' | 'N' | 'E' | 'R' | 'A' | 'G' | 'C' | 'B' | 'Q' | 'K';
+  type?: XiangqiPieceType;
   player?: number;
   moving?: boolean;
   on_cooldown?: boolean;
-  moved?: boolean; // 是否移动过（为兼容旧协议保留）
+  moved?: boolean;
 }
 
-// Active move in WebSocket messages
 export interface WsActiveMove {
   piece_id: string;
   path: [number, number][];
@@ -25,13 +24,11 @@ export interface WsActiveMove {
   progress?: number;
 }
 
-// Cooldown in WebSocket messages
 export interface WsCooldown {
   piece_id: string;
   remaining_ticks: number;
 }
 
-// Game event types
 export interface WsCaptureEvent {
   type: 'capture';
   capturer: string;
@@ -39,18 +36,7 @@ export interface WsCaptureEvent {
   tick: number;
 }
 
-export interface WsPromotionEvent {
-  type: 'promotion';
-  piece_id: string;
-  to_type: 'A' | 'G' | 'R' | 'N' | 'E' | 'C' | 'P';
-  tick: number;
-}
-
-export type WsGameEvent = WsCaptureEvent | WsPromotionEvent;
-
-// ============================================
-// Server -> Client Messages
-// ============================================
+export type WsGameEvent = WsCaptureEvent;
 
 export interface CampaignLevelInfo {
   level_id: number;
@@ -61,9 +47,9 @@ export interface CampaignLevelInfo {
 
 export interface JoinedMessage {
   type: 'joined';
-  player_number: number; // 0 = spectator, 1-4 = player
-  tick_rate_hz: number; // Server tick rate for client synchronization
-  campaign_level: CampaignLevelInfo | null; // Present for campaign games
+  player_number: number; // 0 = spectator, 1-2 = player
+  tick_rate_hz: number;
+  campaign_level: CampaignLevelInfo | null;
 }
 
 export interface StateUpdateMessage {
@@ -73,12 +59,12 @@ export interface StateUpdateMessage {
   active_moves: WsActiveMove[];
   cooldowns: WsCooldown[];
   events: WsGameEvent[];
-  time_since_tick?: number; // Milliseconds since tick started (0-100), optional for backwards compatibility
+  time_since_tick?: number;
 }
 
 export interface CountdownMessage {
   type: 'countdown';
-  seconds: number; // Seconds remaining (3, 2, 1)
+  seconds: number;
 }
 
 export interface GameStartedMessage {
@@ -88,8 +74,8 @@ export interface GameStartedMessage {
 
 export interface GameOverMessage {
   type: 'game_over';
-  winner: number; // 0 for draw, 1-4 for player
-  reason: 'king_captured' | 'general_captured' | 'draw_timeout' | 'resignation' | 'draw';
+  winner: number; // 0 for draw, 1-2 for player
+  reason: 'general_captured' | 'draw_timeout' | 'resignation' | 'draw';
 }
 
 export interface RatingChangePayload {
@@ -102,7 +88,7 @@ export interface RatingChangePayload {
 
 export interface RatingUpdateMessage {
   type: 'rating_update';
-  ratings: Record<string, RatingChangePayload>; // player_num (as string) -> rating change
+  ratings: Record<string, RatingChangePayload>;
 }
 
 export interface MoveRejectedMessage {
@@ -138,10 +124,6 @@ export type ServerMessage =
   | PongMessage
   | ErrorMessage;
 
-// ============================================
-// Client -> Server Messages
-// ============================================
-
 export interface MoveClientMessage {
   type: 'move';
   piece_id: string;
@@ -171,10 +153,6 @@ export type ClientMessage =
   | ResignClientMessage
   | OfferDrawClientMessage
   | PingClientMessage;
-
-// ============================================
-// Connection state
-// ============================================
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
 
