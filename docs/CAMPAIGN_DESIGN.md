@@ -1,4 +1,4 @@
-# Kung Fu Chess Campaign Mode — Design Document
+# Real-time-chess-battle Campaign Mode — Design Document
 
 ## Overview
 
@@ -347,7 +347,7 @@ LEVELS: list[CampaignLevel] = [
             P1P1P1P1P1P1P1P1
             R1N1B1Q1K1B1N1R1
         """,
-        title="Welcome to Kung Fu Chess",
+        title="Welcome to Real-time-chess-battle",
         description="It's like chess, but there are no turns. Win by capturing the enemy king!",
     ),
     CampaignLevel(

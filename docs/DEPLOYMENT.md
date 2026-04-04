@@ -1,6 +1,6 @@
 # Production Deployment
 
-Kung Fu Chess runs on a single AWS Lightsail instance (Ubuntu 24.04 LTS) with Caddy handling HTTPS via Let's Encrypt.
+Real-time-chess-battle runs on a single AWS Lightsail instance (Ubuntu 24.04 LTS) with Caddy handling HTTPS via Let's Encrypt.
 
 ## Architecture
 
@@ -17,8 +17,8 @@ Caddy (native, ports 80/443 — auto Let's Encrypt)
     │
     ▼
 systemd services
-├── kfchess@worker1 → uvicorn :8001
-└── kfchess@worker2 → uvicorn :8002
+├── real-time-chess-battle@worker1 → uvicorn :8001
+└── real-time-chess-battle@worker2 → uvicorn :8002
     │
     ▼
 Docker Compose
@@ -29,7 +29,7 @@ Docker Compose
 ## Prerequisites
 
 - AWS Lightsail instance running **Ubuntu 24.04 LTS**
-- DNS A record: `kfchess.com` → instance public IP
+- DNS A record: `real-time-chess-battle.example.com` → instance public IP
 - Lightsail firewall: ports **80** and **443** open
 - SSH access to the instance
 
@@ -47,8 +47,8 @@ All deployment files live in `deploy/`:
 | `docker-compose.prod.yml` | Postgres + Redis containers |
 | `generate-caddyfile.sh` | Generates Caddyfile from worker count |
 | `Caddyfile` | Generated Caddy config (do not edit manually) |
-| `kfchess-worker.sh` | Worker wrapper (derives port from ID) |
-| `systemd/kfchess@.service` | Systemd template unit |
+| `real-time-chess-battle-worker.sh` | Worker wrapper (derives port from ID) |
+| `systemd/real-time-chess-battle@.service` | Systemd template unit |
 | `migrate-legacy-data.sh` | Legacy database migration |
 
 ## Initial Setup
@@ -76,8 +76,8 @@ Review `config.sh` — the defaults should be fine for most setups:
 
 ```bash
 NUM_WORKERS=2                                     # uvicorn worker processes
-DEPLOY_DIR=/var/www/kfchess                       # where the repo lives on the server
-DOMAIN=kfchess.com                                # your domain
+DEPLOY_DIR=/var/www/real-time-chess-battle                       # where the repo lives on the server
+DOMAIN=real-time-chess-battle.example.com                                # your domain
 REPO_URL=https://github.com/paladin8/kfchess-cc.git  # git remote
 ```
 
@@ -87,7 +87,7 @@ REPO_URL=https://github.com/paladin8/kfchess-cc.git  # git remote
 sudo bash bootstrap.sh
 ```
 
-This installs everything (Docker, Caddy, Python 3.12, uv, Node.js 20), creates the `kfchess` user, clones the repo to `/var/www/kfchess`, starts Postgres/Redis, builds the frontend, runs migrations, and starts all services.
+This installs everything (Docker, Caddy, Python 3.12, uv, Node.js 20), creates the `kfchess` user, clones the repo to `/var/www/real-time-chess-battle`, starts Postgres/Redis, builds the frontend, runs migrations, and starts all services.
 
 The bootstrap script also:
 - Creates `server/.env` with production defaults (DEV_MODE=false, random SECRET_KEY, correct DATABASE_URL password)
@@ -98,7 +98,7 @@ The bootstrap script also:
 The core site works after bootstrap. For full functionality, edit the server env:
 
 ```bash
-sudo -u kfchess vim /var/www/kfchess/server/.env
+sudo -u kfchess vim /var/www/real-time-chess-battle/server/.env
 ```
 
 Optional:
@@ -109,7 +109,7 @@ Optional:
 Also set the Amplitude key in `client/.env` if using analytics:
 
 ```bash
-sudo -u kfchess vim /var/www/kfchess/client/.env
+sudo -u kfchess vim /var/www/real-time-chess-battle/client/.env
 ```
 
 ### 5. Test before DNS cutover (optional)
@@ -117,7 +117,7 @@ sudo -u kfchess vim /var/www/kfchess/client/.env
 If DNS still points to the old server, use HTTP-only mode to test:
 
 ```bash
-sudo bash /var/www/kfchess/deploy/generate-caddyfile.sh --http-only --install
+sudo bash /var/www/real-time-chess-battle/deploy/generate-caddyfile.sh --http-only --install
 sudo systemctl reload caddy
 ```
 
@@ -131,9 +131,9 @@ curl http://<instance-ip>/api/replays       # test API routing
 When ready to go live, switch to production mode and flip DNS:
 
 ```bash
-sudo bash /var/www/kfchess/deploy/generate-caddyfile.sh --install
+sudo bash /var/www/real-time-chess-battle/deploy/generate-caddyfile.sh --install
 sudo systemctl reload caddy
-# Then update DNS A records for kfchess.com (and www) to the instance IP
+# Then update DNS A records for real-time-chess-battle.example.com (and www) to the instance IP
 ```
 
 Caddy will automatically obtain Let's Encrypt certificates once DNS resolves to the instance.
@@ -141,13 +141,13 @@ Caddy will automatically obtain Let's Encrypt certificates once DNS resolves to 
 ### 6. Redeploy after config changes
 
 ```bash
-sudo bash /var/www/kfchess/deploy/deploy.sh
+sudo bash /var/www/real-time-chess-battle/deploy/deploy.sh
 ```
 
 ### 7. Verify
 
 ```bash
-curl https://kfchess.com/caddy-health     # should return "ok"
+curl https://real-time-chess-battle.example.com/caddy-health     # should return "ok"
 curl http://127.0.0.1:8001/health          # should return {"status":"ok"}
 curl http://127.0.0.1:8002/health          # should return {"status":"ok"}
 ```
@@ -155,7 +155,7 @@ curl http://127.0.0.1:8002/health          # should return {"status":"ok"}
 ## Deploying Updates
 
 ```bash
-sudo bash /var/www/kfchess/deploy/deploy.sh
+sudo bash /var/www/real-time-chess-battle/deploy/deploy.sh
 ```
 
 This does:
@@ -187,7 +187,7 @@ pg_dump --data-only --inserts --column-inserts \
 **2. Copy to new server and run:**
 
 ```bash
-bash /var/www/kfchess/deploy/migrate-legacy-data.sh legacy_data.sql
+bash /var/www/real-time-chess-battle/deploy/migrate-legacy-data.sh legacy_data.sql
 ```
 
 This creates staging tables, loads the dump, transforms the data (mapping old columns to new schema), resets sequences, and prints row counts. No host `psql` needed — it runs inside the Docker Postgres container.
@@ -206,20 +206,20 @@ Each worker logs to systemd journal. Log lines include the server ID (`[worker1]
 
 ```bash
 # Follow logs
-journalctl -u kfchess@worker1 -f              # single worker
-journalctl -u 'kfchess@*' -f                  # all workers
+journalctl -u real-time-chess-battle@worker1 -f              # single worker
+journalctl -u 'real-time-chess-battle@*' -f                  # all workers
 journalctl -u caddy -f                        # Caddy access/error logs
 
 # Recent logs
-journalctl -u kfchess@worker1 --since "5 min ago"
-journalctl -u kfchess@worker1 --since today
+journalctl -u real-time-chess-battle@worker1 --since "5 min ago"
+journalctl -u real-time-chess-battle@worker1 --since today
 
 # Filter by severity
-journalctl -u 'kfchess@*' -p err              # errors only
-journalctl -u 'kfchess@*' -p warning          # warnings and above
+journalctl -u 'real-time-chess-battle@*' -p err              # errors only
+journalctl -u 'real-time-chess-battle@*' -p warning          # warnings and above
 
 # Search for a specific game or user
-journalctl -u 'kfchess@*' --since today | grep "game_id_here"
+journalctl -u 'real-time-chess-battle@*' --since today | grep "game_id_here"
 ```
 
 Log level is controlled by `LOG_LEVEL` in `server/.env` (default: `INFO`). Set to `DEBUG` for troubleshooting.
@@ -227,12 +227,12 @@ Log level is controlled by `LOG_LEVEL` in `server/.env` (default: `INFO`). Set t
 ### Service management
 
 ```bash
-systemctl status kfchess@worker1           # check worker status
-systemctl restart kfchess@worker1          # restart a single worker
-systemctl stop kfchess@worker1             # stop a worker
+systemctl status real-time-chess-battle@worker1           # check worker status
+systemctl restart real-time-chess-battle@worker1          # restart a single worker
+systemctl stop real-time-chess-battle@worker1             # stop a worker
 
-docker compose -f /var/www/kfchess/deploy/docker-compose.prod.yml ps      # check Postgres/Redis
-docker compose -f /var/www/kfchess/deploy/docker-compose.prod.yml logs -f  # follow DB logs
+docker compose -f /var/www/real-time-chess-battle/deploy/docker-compose.prod.yml ps      # check Postgres/Redis
+docker compose -f /var/www/real-time-chess-battle/deploy/docker-compose.prod.yml logs -f  # follow DB logs
 ```
 
 ### Changing worker count
@@ -243,12 +243,12 @@ docker compose -f /var/www/kfchess/deploy/docker-compose.prod.yml logs -f  # fol
 
 ```bash
 # Adding worker3
-systemctl enable kfchess@worker3
-systemctl start kfchess@worker3
+systemctl enable real-time-chess-battle@worker3
+systemctl start real-time-chess-battle@worker3
 
 # Removing worker3
-systemctl stop kfchess@worker3
-systemctl disable kfchess@worker3
+systemctl stop real-time-chess-battle@worker3
+systemctl disable real-time-chess-battle@worker3
 ```
 
 ### Cleaning up stale/orphaned games
@@ -258,7 +258,7 @@ The cleanup script removes stale `active_games` DB rows and orphaned Redis snaps
 Dry run is the default — it shows what would be removed without deleting anything:
 
 ```bash
-cd /var/www/kfchess/server
+cd /var/www/real-time-chess-battle/server
 
 # Preview: games older than 30 minutes (default)
 sudo -u kfchess uv run python scripts/cleanup_active_games.py
@@ -278,6 +278,6 @@ This cleans up both the PostgreSQL `active_games` table and the corresponding Re
 ### Database access
 
 ```bash
-docker compose -f /var/www/kfchess/deploy/docker-compose.prod.yml exec postgres \
+docker compose -f /var/www/real-time-chess-battle/deploy/docker-compose.prod.yml exec postgres \
   psql -U kfchess -d kfchess
 ```

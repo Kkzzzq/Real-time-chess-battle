@@ -1,6 +1,6 @@
 # Replay System Design
 
-This document describes the design for replay recording, storage, and playback in Kung Fu Chess.
+This document describes the design for replay recording, storage, and playback in Real-time-chess-battle.
 
 ---
 
@@ -35,7 +35,7 @@ The replay system allows players to:
 1. **No client-side game logic**: Client only renders; server simulates
 2. **Reuse existing infrastructure**: Same WebSocket protocol and rendering as live games
 3. **Simple client implementation**: Replay viewer is nearly identical to spectator mode
-4. **Backwards compatible**: Support loading replays from the original Kung Fu Chess format
+4. **Backwards compatible**: Support loading replays from the original Real-time-chess-battle format
 5. **Efficient storage**: Store only moves, not full state at each tick
 
 ---

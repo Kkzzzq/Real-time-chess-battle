@@ -13,7 +13,7 @@
 #   8. Starts everything
 #
 # Prerequisites:
-#   - DNS for kfchess.com must point to this instance's public IP
+#   - DNS for real-time-chess-battle.example.com must point to this instance's public IP
 #     (Caddy needs this to obtain a Let's Encrypt certificate)
 #   - Ports 80 and 443 must be open in the Lightsail firewall
 #   - deploy/.env must exist with POSTGRES_PASSWORD set (see deploy/.env.example)
@@ -148,7 +148,7 @@ env = '$DEPLOY_DIR/server/.env'
 pw = urllib.parse.quote(sys.argv[1], safe='')
 with open(env) as f: text = f.read()
 text = text.replace(
-    'DATABASE_URL=postgresql+asyncpg://kfchess:kfchess@localhost:5432/kfchess',
+    'DATABASE_URL=postgresql+asyncpg://kfchess:real-time-chess-battle@localhost:5432/kfchess',
     f'DATABASE_URL=postgresql+asyncpg://kfchess:{pw}@localhost:5432/kfchess'
 )
 with open(env, 'w') as f: f.write(text)
@@ -206,8 +206,8 @@ sudo -u kfchess bash -c "cd $DEPLOY_DIR/server && uv run alembic upgrade head"
 # ─── 12. Install systemd services ────────────────────────────
 
 log "Installing systemd services"
-cp "$DEPLOY_DIR/deploy/systemd/kfchess@.service" /etc/systemd/system/kfchess@.service
-chmod +x "$DEPLOY_DIR/deploy/kfchess-worker.sh"
+cp "$DEPLOY_DIR/deploy/systemd/real-time-chess-battle@.service" /etc/systemd/system/real-time-chess-battle@.service
+chmod +x "$DEPLOY_DIR/deploy/real-time-chess-battle-worker.sh"
 systemctl daemon-reload
 
 # ─── 13. Generate and install Caddyfile ───────────────────────
@@ -219,9 +219,9 @@ bash "$DEPLOY_DIR/deploy/generate-caddyfile.sh" --install
 
 log "Starting worker services"
 for i in $(seq 1 "$NUM_WORKERS"); do
-    systemctl enable "kfchess@worker${i}"
-    systemctl start "kfchess@worker${i}"
-    echo "Started kfchess@worker${i}"
+    systemctl enable "real-time-chess-battle@worker${i}"
+    systemctl start "real-time-chess-battle@worker${i}"
+    echo "Started real-time-chess-battle@worker${i}"
 done
 
 log "Starting Caddy"

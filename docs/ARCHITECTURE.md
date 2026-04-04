@@ -1,6 +1,6 @@
-# Kung Fu Chess - Architecture
+# Real-time-chess-battle - Architecture
 
-This document describes the system architecture for Kung Fu Chess.
+This document describes the system architecture for Real-time-chess-battle.
 
 ---
 

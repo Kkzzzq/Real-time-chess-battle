@@ -2,7 +2,7 @@
 
 > **Note:** This document describes the abstract multi-server architecture (game routing, crash recovery, drain mode). For the current production deployment setup using Caddy + Lightsail, see [DEPLOYMENT.md](DEPLOYMENT.md). The nginx/ALB references below reflect the original design; the production implementation uses Caddy with equivalent routing.
 
-This document describes the design for running multiple Kung Fu Chess server instances behind a load balancer, supporting rolling deploys and crash recovery with minimal game disruption.
+This document describes the design for running multiple Real-time-chess-battle server instances behind a load balancer, supporting rolling deploys and crash recovery with minimal game disruption.
 
 ---
 
@@ -123,7 +123,7 @@ We use **application-level redirects**: a WS connection can land on any server (
 #### How It Works
 
 ```
-1. Client connects: wss://kfchess.com/ws/game/{game_id}?player_key=xxx
+1. Client connects: wss://real-time-chess-battle.example.com/ws/game/{game_id}?player_key=xxx
    → nginx round-robins to Server 2
 
 2. Server 2 checks local GameService.games → not found
@@ -132,13 +132,13 @@ We use **application-level redirects**: a WS connection can land on any server (
 
 4. Server 2 closes WS with code 4302, reason: "worker1"
 
-5. Client reconnects: wss://kfchess.com/ws/game/{game_id}?player_key=xxx&server=worker1
+5. Client reconnects: wss://real-time-chess-battle.example.com/ws/game/{game_id}?player_key=xxx&server=worker1
    → nginx sees server=worker1 query param, routes to Server 1
 
 6. Server 1 has the game → accepts connection, proceeds normally
 ```
 
-The client never needs to know internal server addresses - it always connects through `kfchess.com`. The `server` query parameter is an opaque routing hint that nginx resolves to the correct upstream.
+The client never needs to know internal server addresses - it always connects through `real-time-chess-battle.example.com`. The `server` query parameter is an opaque routing hint that nginx resolves to the correct upstream.
 
 #### Registration Flow
 
@@ -663,7 +663,7 @@ server:{server_id}:addr      → String: "127.0.0.1:8001"     TTL: 10s (refreshe
 
 ## nginx Configuration
 
-Full production nginx config for `kfchess.com`. SSL is terminated at the ALB, so nginx handles plain HTTP/WS from the ALB.
+Full production nginx config for `real-time-chess-battle.example.com`. SSL is terminated at the ALB, so nginx handles plain HTTP/WS from the ALB.
 
 ### `/etc/nginx/conf.d/kfchess.conf`
 
@@ -699,7 +699,7 @@ map $http_upgrade $connection_upgrade {
 
 server {
     listen 80;
-    server_name kfchess.com;
+    server_name real-time-chess-battle.example.com;
 
     # ── Health check (for ALB) ───────────────────────────────
     location = /nginx-health {
@@ -709,7 +709,7 @@ server {
 
     # ── Static frontend assets ───────────────────────────────
     location / {
-        root /var/www/kfchess/client/dist;
+        root /var/www/real-time-chess-battle/client/dist;
         try_files $uri $uri/ /index.html;
 
         # Cache static assets aggressively
@@ -804,7 +804,7 @@ set -euo pipefail
 # ─── Configuration ───────────────────────────────────────────
 WORKERS=(worker1 worker2 worker3)
 PORTS=(8001 8002 8003)
-APP_DIR="/var/www/kfchess"
+APP_DIR="/var/www/real-time-chess-battle"
 SERVER_DIR="$APP_DIR/server"
 VENV_CMD="uv run"
 DEPLOY_PAUSE=2  # seconds between workers
@@ -833,7 +833,7 @@ npm ci --production
 npm run build
 
 # Copy built frontend to nginx serving directory
-cp -r dist/* /var/www/kfchess/client/dist/
+cp -r dist/* /var/www/real-time-chess-battle/client/dist/
 
 # Install/update backend dependencies
 cd "$SERVER_DIR"
@@ -852,9 +852,9 @@ for i in "${!WORKERS[@]}"; do
 
     # Send SIGTERM to the worker process (triggers graceful drain)
     # The server writes final snapshots and closes connections before exiting
-    if systemctl is-active --quiet "kfchess@$worker"; then
+    if systemctl is-active --quiet "real-time-chess-battle@$worker"; then
         log "  Stopping $worker (graceful drain)..."
-        systemctl stop "kfchess@$worker"
+        systemctl stop "real-time-chess-battle@$worker"
 
         # Wait for process to fully exit
         sleep 1
@@ -864,7 +864,7 @@ for i in "${!WORKERS[@]}"; do
 
     # Start the worker with new code
     log "  Starting $worker..."
-    systemctl start "kfchess@$worker"
+    systemctl start "real-time-chess-battle@$worker"
 
     # Wait for health check
     for attempt in $(seq 1 10); do
@@ -891,11 +891,11 @@ log "Deploy complete! All workers running."
 
 ### systemd Unit Template
 
-### `/etc/systemd/system/kfchess@.service`
+### `/etc/systemd/system/real-time-chess-battle@.service`
 
 ```ini
 [Unit]
-Description=Kung Fu Chess Server (%i)
+Description=Real-time-chess-battle Server (%i)
 After=network.target postgresql.service redis.service
 Requires=postgresql.service redis.service
 
@@ -903,9 +903,9 @@ Requires=postgresql.service redis.service
 Type=exec
 User=kfchess
 Group=kfchess
-WorkingDirectory=/var/www/kfchess/server
+WorkingDirectory=/var/www/real-time-chess-battle/server
 Environment=KFCHESS_SERVER_ID=%i
-EnvironmentFile=/var/www/kfchess/server/.env
+EnvironmentFile=/var/www/real-time-chess-battle/server/.env
 
 # Uses wrapper script to derive port from worker number (worker1→8001, etc.)
 ExecStart=/usr/local/bin/kfchess-worker

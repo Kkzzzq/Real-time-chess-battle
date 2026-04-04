@@ -193,8 +193,8 @@ def main() -> None:
     parser.add_argument(
         "url",
         nargs="?",
-        default="https://kfchess.com",
-        help="Base URL (default: https://kfchess.com)",
+        default="https://real-time-chess-battle.example.com",
+        help="Base URL (default: https://real-time-chess-battle.example.com)",
     )
     parser.add_argument(
         "--timeout",

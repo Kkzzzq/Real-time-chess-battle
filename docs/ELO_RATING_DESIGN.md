@@ -1,6 +1,6 @@
 # ELO Rating System Design
 
-This document describes the design for implementing an ELO-based rating system for Kung Fu Chess.
+This document describes the design for implementing an ELO-based rating system for Real-time-chess-battle.
 
 ---
 

@@ -1,25 +1,19 @@
+
 [Unit]
 Description=Real-time-chess-battle Server (%i)
 After=network.target docker.service
-Wants=docker.service
+Requires=docker.service
 
 [Service]
-Type=exec
-User=kfchess
-Group=kfchess
-WorkingDirectory=/var/www/kfchess/server
-Environment=KFCHESS_SERVER_ID=%i
-EnvironmentFile=/var/www/kfchess/server/.env
-ExecStart=/var/www/kfchess/deploy/real-time-chess-battle-worker.sh
-
-KillSignal=SIGTERM
-TimeoutStopSec=15
-Restart=on-failure
+Type=simple
+User=rtcb
+Group=rtcb
+WorkingDirectory=/var/www/real-time-chess-battle/server
+Environment=RTCB_SERVER_ID=%i
+EnvironmentFile=/var/www/real-time-chess-battle/server/.env
+ExecStart=/var/www/real-time-chess-battle/deploy/real-time-chess-battle-worker.sh
+Restart=always
 RestartSec=5
-
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=real-time-chess-battle-%i
 
 [Install]
 WantedBy=multi-user.target

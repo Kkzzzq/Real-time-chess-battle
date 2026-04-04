@@ -87,7 +87,7 @@ HEALTH_TIMEOUT=15  # seconds to wait for health check
 RESTART_BUFFER=5   # seconds to wait between workers for game handoff
 
 for i in $(seq 1 "$NUM_WORKERS"); do
-    WORKER="kfchess@worker${i}"
+    WORKER="real-time-chess-battle@worker${i}"
     PORT=$((8000 + i))
 
     echo "Restarting $WORKER..."

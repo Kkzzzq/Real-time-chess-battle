@@ -1,6 +1,6 @@
 # Lobby System Design
 
-This document describes the design for the lobby system in Kung Fu Chess.
+This document describes the design for the lobby system in Real-time-chess-battle.
 
 ---
 
@@ -1444,7 +1444,7 @@ export function Home() {
 
   return (
     <div className="home-page">
-      <h1>Kung Fu Chess</h1>
+      <h1>Real-time-chess-battle</h1>
 
       <div className="play-options">
         <button onClick={handlePlayVsAI}>Play vs AI</button>

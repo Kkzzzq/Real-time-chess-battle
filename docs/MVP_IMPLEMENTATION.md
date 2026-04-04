@@ -1,6 +1,6 @@
 # MVP Implementation Plan
 
-This document defines the implementation plan for a minimum viable Kung Fu Chess game where a player can play against a dummy AI in the browser.
+This document defines the implementation plan for a minimum viable Real-time-chess-battle game where a player can play against a dummy AI in the browser.
 
 ## MVP Scope
 

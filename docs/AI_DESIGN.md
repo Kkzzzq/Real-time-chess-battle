@@ -1,4 +1,4 @@
-# Kung Fu Chess AI — Design Document
+# Real-time-chess-battle AI — Design Document
 
 ## Overview
 

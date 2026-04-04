@@ -1,6 +1,6 @@
 # User Authentication Design
 
-This document describes the design and implementation of user authentication in Kung Fu Chess, with full backwards compatibility for legacy users.
+This document describes the design and implementation of user authentication in Real-time-chess-battle, with full backwards compatibility for legacy users.
 
 > **Status: IMPLEMENTED** - All phases complete. See [Implementation Status](#implementation-status) for details.
 
@@ -641,7 +641,7 @@ GOOGLE_CLIENT_SECRET=...
 
 # Email via Resend (optional - logs tokens if not set)
 RESEND_API_KEY=...
-EMAIL_FROM=noreply@kfchess.com
+EMAIL_FROM=noreply@real-time-chess-battle.example.com
 SEND_EMAILS=true  # Must be explicitly enabled
 
 # Frontend URL (for email links and OAuth redirects)
@@ -660,10 +660,10 @@ For Google OAuth:
 1. Create OAuth 2.0 Client ID (Web application)
 2. Add authorized JavaScript origins:
    - `http://localhost:5173` (dev)
-   - `https://www.kfchess.com` (prod)
+   - `https://www.real-time-chess-battle.example.com` (prod)
 3. Add authorized redirect URIs:
    - `http://localhost:5173/auth/google/callback` (dev)
-   - `https://www.kfchess.com/auth/google/callback` (prod)
+   - `https://www.real-time-chess-battle.example.com/auth/google/callback` (prod)
 4. Enable People API in Google Cloud Console
 
 ---

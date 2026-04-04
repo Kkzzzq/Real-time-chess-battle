@@ -8,8 +8,8 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 SSH_KEY="$HOME/.ssh/LightsailDefaultKey-us-west-2.pem"
 SSH_HOST="ubuntu@35.167.158.216"
-REMOTE_DEPLOY_DIR="/var/www/kfchess"
-SITE_URL="https://kfchess.com"
+REMOTE_DEPLOY_DIR="/var/www/real-time-chess-battle"
+SITE_URL="https://real-time-chess-battle.example.com"
 
 # ─── Helpers ──────────────────────────────────────────────────
 
@@ -64,11 +64,11 @@ log "Phase 3: Upload frontend bundle"
 # Upload to temp dir (ubuntu user can't write to kfchess-owned dist/)
 # then move into place with correct ownership
 rsync -az --delete -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=accept-new" \
-    "$REPO_DIR/client/dist/" "$SSH_HOST:/tmp/kfchess-dist/" \
+    "$REPO_DIR/client/dist/" "$SSH_HOST:/tmp/real-time-chess-battle-dist/" \
     || die "Frontend upload failed."
 
 ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new "$SSH_HOST" \
-    "sudo rsync -a --delete /tmp/kfchess-dist/ $REMOTE_DEPLOY_DIR/client/dist/ && sudo chown -R kfchess:kfchess $REMOTE_DEPLOY_DIR/client/dist/ && rm -rf /tmp/kfchess-dist" \
+    "sudo rsync -a --delete /tmp/real-time-chess-battle-dist/ $REMOTE_DEPLOY_DIR/client/dist/ && sudo chown -R kfchess:kfchess $REMOTE_DEPLOY_DIR/client/dist/ && rm -rf /tmp/real-time-chess-battle-dist" \
     || die "Frontend install failed."
 
 echo "Frontend bundle uploaded."

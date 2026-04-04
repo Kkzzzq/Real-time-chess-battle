@@ -3,15 +3,15 @@ services:
     image: postgres:15
     restart: unless-stopped
     environment:
-      POSTGRES_USER: kfchess
+      POSTGRES_USER: rtcb
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      POSTGRES_DB: kfchess
+      POSTGRES_DB: real_time_chess_battle
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kfchess"]
+      test: ["CMD-SHELL", "pg_isready -U rtcb"]
       interval: 5s
       timeout: 5s
       retries: 5
