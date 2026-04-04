@@ -5,7 +5,7 @@
 // Piece representation from server
 export interface ApiPiece {
   id: string;
-  type: 'P' | 'N' | 'E' | 'R' | 'A' | 'G' | 'C' | 'B' | 'Q' | 'K';
+  type: 'P' | 'N' | 'E' | 'R' | 'A' | 'G' | 'C';
   player: number;
   row: number;
   col: number;
@@ -31,7 +31,7 @@ export interface ApiCooldown {
 
 // Board representation
 export interface ApiBoard {
-  board_type: 'standard' | 'four_player';
+  board_type: 'standard';
   width: number;
   height: number;
   pieces: ApiPiece[];
@@ -53,7 +53,7 @@ export interface ApiGameState {
 // Create game request
 export interface CreateGameRequest {
   speed: 'standard' | 'lightning';
-  board_type: 'standard' | 'four_player';
+  board_type: 'standard';
   opponent: 'bot:novice' | 'bot:random';
 }
 
@@ -61,8 +61,8 @@ export interface CreateGameRequest {
 export interface CreateGameResponse {
   game_id: string;
   player_key: string;
-  player_number: number;
-  board_type: 'standard' | 'four_player';
+  player_number: number; // 1-2
+  board_type: 'standard';
   status: 'waiting';
 }
 
@@ -143,7 +143,7 @@ export interface ApiReplayMove {
 export interface ApiReplay {
   version: number;
   speed: 'standard' | 'lightning';
-  board_type: 'standard' | 'four_player';
+  board_type: 'standard';
   players: Record<string, PlayerDisplay>;
   moves: ApiReplayMove[];
   total_ticks: number;
@@ -164,7 +164,7 @@ export interface PlayerDisplay {
 export interface ApiReplaySummary {
   game_id: string;
   speed: 'standard' | 'lightning';
-  board_type: 'standard' | 'four_player';
+  board_type: 'standard';
   players: Record<string, PlayerDisplay>;
   total_ticks: number;
   winner: number | null;
@@ -257,7 +257,7 @@ export interface AuthErrorResponse {
 export interface LobbySettings {
   isPublic: boolean;
   speed: 'standard' | 'lightning';
-  playerCount: 2 | 4;
+  playerCount: 2;
   isRanked: boolean;
 }
 
@@ -358,7 +358,7 @@ export interface LiveGameItem {
   settings: {
     speed: string;
     playerCount: number;
-    boardType: string;
+    boardType: 'standard';
   };
   current_tick: number;
   started_at: string | null;
