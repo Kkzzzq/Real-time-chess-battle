@@ -1,5 +1,5 @@
 {
-  "name": "kfchess-client",
+  "name": "real-time-chess-battle-client",
   "private": true,
   "version": "0.1.0",
   "type": "module",
