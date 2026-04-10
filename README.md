@@ -1,8 +1,6 @@
-# Real-time-chess-battle 审计与改造方案（按你要求的顺序）
+# Real-time-chess-battle 审计与改造方案
 
-## 1. 先把玩法定义定死：`phase_standard_v1`
-
-这版我建议**先只保留一个正式玩法预设**，不要再同时维护 `standard / lightning / four_player / campaign` 多种规则。第一版就做成：**双人、9×10、中国象棋、无回合制、阶段解锁、分棋种冷却**。
+第一版就做成：**双人、9×10、中国象棋、无回合制、阶段解锁、分棋种冷却**。
 
 ### 1.1 对局目标
 - 红方在下（player=1），黑方在上（player=2），使用标准中国象棋初始布局。
