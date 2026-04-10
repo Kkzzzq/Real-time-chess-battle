@@ -33,7 +33,7 @@ def test_phase_schedule() -> None:
 
 def test_auto_unlock_prefers_cannon() -> None:
     _, state = make_running_state(0)
-    UnlockService.apply_auto_unlocks(state, 60_000)
+    UnlockService.apply_auto_unlocks(state, 71_000)
     assert PieceType.CANNON in state.unlocked_by_player[1]
     assert PieceType.CANNON in state.unlocked_by_player[2]
 

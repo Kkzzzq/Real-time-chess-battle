@@ -9,34 +9,43 @@ from app.core.ruleset import (
 )
 from app.domain.enums import PieceType
 from app.domain.models import MatchState, Piece
+from app.engine.occupancy import get_cell_owner, get_path_blockers
 
 
-def piece_at(state: MatchState, x: int, y: int, ignore: set[str] | None = None) -> Piece | None:
+def piece_at(
+    state: MatchState,
+    x: int,
+    y: int,
+    now_ms: int | None = None,
+    ignore: set[str] | None = None,
+) -> Piece | None:
+    return get_cell_owner(state, x, y, now_ms if now_ms is not None else state.now_ms, ignore)
+
+
+def count_between(
+    state: MatchState,
+    x1: int,
+    y1: int,
+    x2: int,
+    y2: int,
+    now_ms: int | None = None,
+    ignore: set[str] | None = None,
+) -> int:
     ignore = ignore or set()
-    for p in state.pieces.values():
-        if p.alive and p.id not in ignore and p.x == x and p.y == y:
-            return p
-    return None
-
-
-def count_between(state: MatchState, x1: int, y1: int, x2: int, y2: int, ignore: set[str] | None = None) -> int:
-    ignore = ignore or set()
-    count = 0
+    points: list[tuple[int, int]] = []
     if x1 == x2:
         lo, hi = sorted((y1, y2))
-        for y in range(lo + 1, hi):
-            if piece_at(state, x1, y, ignore):
-                count += 1
+        points = [(x1, y) for y in range(lo + 1, hi)]
     elif y1 == y2:
         lo, hi = sorted((x1, x2))
-        for x in range(lo + 1, hi):
-            if piece_at(state, x, y1, ignore):
-                count += 1
-    return count
+        points = [(x, y1) for x in range(lo + 1, hi)]
+    blockers = get_path_blockers(state, points, now_ms if now_ms is not None else state.now_ms, ignore)
+    return len(blockers)
 
 
-def validate_move(piece: Piece, target: tuple[int, int], state: MatchState) -> tuple[bool, str]:
+def validate_move(piece: Piece, target: tuple[int, int], state: MatchState, now_ms: int | None = None) -> tuple[bool, str]:
     tx, ty = target
+    now_ms = now_ms if now_ms is not None else state.now_ms
     if not piece.alive:
         return False, "piece dead"
     if piece.is_moving:
@@ -45,7 +54,7 @@ def validate_move(piece: Piece, target: tuple[int, int], state: MatchState) -> t
         return False, "target out of board"
     if (piece.x, piece.y) == target:
         return False, "same cell"
-    occ = piece_at(state, tx, ty)
+    occ = piece_at(state, tx, ty, now_ms, {piece.id})
     if occ and occ.owner == piece.owner:
         return False, "cannot capture ally"
 
@@ -58,15 +67,15 @@ def validate_move(piece: Piece, target: tuple[int, int], state: MatchState) -> t
         PieceType.CANNON: validate_cannon_move,
         PieceType.GENERAL: validate_general_move,
     }[piece.kind]
-    ok, msg = checker(piece, tx, ty, state)
+    ok, msg = checker(piece, tx, ty, state, now_ms)
     if not ok:
         return ok, msg
-    if would_generals_face_after_move(piece, target, state):
+    if would_generals_face_after_move(piece, target, state, now_ms):
         return False, "generals cannot face"
     return True, "ok"
 
 
-def validate_soldier_move(piece: Piece, tx: int, ty: int, state: MatchState) -> tuple[bool, str]:
+def validate_soldier_move(piece: Piece, tx: int, ty: int, state: MatchState, now_ms: int) -> tuple[bool, str]:
     dx, dy = tx - piece.x, ty - piece.y
     if abs(dx) + abs(dy) != 1:
         return False, "soldier one step"
@@ -79,7 +88,7 @@ def validate_soldier_move(piece: Piece, tx: int, ty: int, state: MatchState) -> 
     return False, "invalid soldier move"
 
 
-def validate_guard_move(piece: Piece, tx: int, ty: int, state: MatchState) -> tuple[bool, str]:
+def validate_guard_move(piece: Piece, tx: int, ty: int, state: MatchState, now_ms: int) -> tuple[bool, str]:
     if abs(tx - piece.x) != 1 or abs(ty - piece.y) != 1:
         return False, "guard diagonal"
     palace_x = RED_PALACE_X if piece.owner == 1 else BLACK_PALACE_X
@@ -89,12 +98,12 @@ def validate_guard_move(piece: Piece, tx: int, ty: int, state: MatchState) -> tu
     return True, "ok"
 
 
-def validate_elephant_move(piece: Piece, tx: int, ty: int, state: MatchState) -> tuple[bool, str]:
+def validate_elephant_move(piece: Piece, tx: int, ty: int, state: MatchState, now_ms: int) -> tuple[bool, str]:
     dx, dy = tx - piece.x, ty - piece.y
     if abs(dx) != 2 or abs(dy) != 2:
         return False, "elephant 2 diagonal"
     eye_x, eye_y = piece.x + dx // 2, piece.y + dy // 2
-    if piece_at(state, eye_x, eye_y):
+    if piece_at(state, eye_x, eye_y, now_ms, {piece.id}):
         return False, "elephant eye blocked"
     if piece.owner == 1 and ty < 5:
         return False, "elephant no river"
@@ -103,29 +112,29 @@ def validate_elephant_move(piece: Piece, tx: int, ty: int, state: MatchState) ->
     return True, "ok"
 
 
-def validate_horse_move(piece: Piece, tx: int, ty: int, state: MatchState) -> tuple[bool, str]:
+def validate_horse_move(piece: Piece, tx: int, ty: int, state: MatchState, now_ms: int) -> tuple[bool, str]:
     dx, dy = tx - piece.x, ty - piece.y
     if (abs(dx), abs(dy)) not in {(2, 1), (1, 2)}:
         return False, "horse L"
     leg = (piece.x + dx // 2, piece.y) if abs(dx) == 2 else (piece.x, piece.y + dy // 2)
-    if piece_at(state, leg[0], leg[1]):
+    if piece_at(state, leg[0], leg[1], now_ms, {piece.id}):
         return False, "horse leg blocked"
     return True, "ok"
 
 
-def validate_rook_move(piece: Piece, tx: int, ty: int, state: MatchState) -> tuple[bool, str]:
+def validate_rook_move(piece: Piece, tx: int, ty: int, state: MatchState, now_ms: int) -> tuple[bool, str]:
     if piece.x != tx and piece.y != ty:
         return False, "rook straight"
-    if count_between(state, piece.x, piece.y, tx, ty, {piece.id}) != 0:
+    if count_between(state, piece.x, piece.y, tx, ty, now_ms, {piece.id}) != 0:
         return False, "rook blocked"
     return True, "ok"
 
 
-def validate_cannon_move(piece: Piece, tx: int, ty: int, state: MatchState) -> tuple[bool, str]:
+def validate_cannon_move(piece: Piece, tx: int, ty: int, state: MatchState, now_ms: int) -> tuple[bool, str]:
     if piece.x != tx and piece.y != ty:
         return False, "cannon straight"
-    between = count_between(state, piece.x, piece.y, tx, ty, {piece.id})
-    target = piece_at(state, tx, ty)
+    between = count_between(state, piece.x, piece.y, tx, ty, now_ms, {piece.id})
+    target = piece_at(state, tx, ty, now_ms, {piece.id})
     if target is None and between == 0:
         return True, "ok"
     if target is not None and between == 1:
@@ -133,9 +142,9 @@ def validate_cannon_move(piece: Piece, tx: int, ty: int, state: MatchState) -> t
     return False, "invalid cannon"
 
 
-def validate_general_move(piece: Piece, tx: int, ty: int, state: MatchState) -> tuple[bool, str]:
+def validate_general_move(piece: Piece, tx: int, ty: int, state: MatchState, now_ms: int) -> tuple[bool, str]:
     enemy = next(p for p in state.pieces.values() if p.alive and p.kind == PieceType.GENERAL and p.owner != piece.owner)
-    if tx == enemy.x and ty == enemy.y and piece.x == enemy.x and count_between(state, piece.x, piece.y, enemy.x, enemy.y, {piece.id, enemy.id}) == 0:
+    if tx == enemy.x and ty == enemy.y and piece.x == enemy.x and count_between(state, piece.x, piece.y, enemy.x, enemy.y, now_ms, {piece.id, enemy.id}) == 0:
         return True, "ok"
     if abs(tx - piece.x) + abs(ty - piece.y) != 1:
         return False, "general one orthogonal"
@@ -146,7 +155,7 @@ def validate_general_move(piece: Piece, tx: int, ty: int, state: MatchState) -> 
     return True, "ok"
 
 
-def would_generals_face_after_move(piece: Piece, target: tuple[int, int], state: MatchState) -> bool:
+def would_generals_face_after_move(piece: Piece, target: tuple[int, int], state: MatchState, now_ms: int) -> bool:
     tx, ty = target
     enemy_general = next((p for p in state.pieces.values() if p.alive and p.kind == PieceType.GENERAL and p.owner != piece.owner), None)
     if enemy_general and (tx, ty) == (enemy_general.x, enemy_general.y):
@@ -164,14 +173,16 @@ def would_generals_face_after_move(piece: Piece, target: tuple[int, int], state:
     x2, y2, g2 = generals[2]
     if x1 != x2:
         return False
-    return count_between(state, x1, y1, x2, y2, {piece.id, g1, g2}) == 0 and not (piece.id not in {g1, g2} and tx == x1 and min(y1, y2) < ty < max(y1, y2))
+    return count_between(state, x1, y1, x2, y2, now_ms, {piece.id, g1, g2}) == 0 and not (
+        piece.id not in {g1, g2} and tx == x1 and min(y1, y2) < ty < max(y1, y2)
+    )
 
 
-def list_legal_targets(piece: Piece, state: MatchState) -> list[tuple[int, int]]:
+def list_legal_targets(piece: Piece, state: MatchState, now_ms: int | None = None) -> list[tuple[int, int]]:
     legal = []
     for x in range(BOARD_COLS):
         for y in range(BOARD_ROWS):
-            ok, _ = validate_move(piece, (x, y), state)
+            ok, _ = validate_move(piece, (x, y), state, now_ms)
             if ok:
                 legal.append((x, y))
     return legal

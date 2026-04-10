@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from app.core.ruleset import COOLDOWN_SECONDS
 from app.domain.enums import MatchStatus, PieceType
 from app.domain.events import EVENT_MOVE_COMMAND_ACCEPTED, EVENT_MOVE_STARTED, GameEvent
 from app.engine import path_planner, timeline
@@ -14,6 +13,10 @@ from app.repository.memory_repo import MemoryRepo
 class CommandService:
     def __init__(self, repo: MemoryRepo) -> None:
         self.repo = repo
+
+    def _append_command(self, state, payload: dict) -> None:
+        state.command_log.append(payload)
+        state.command_log = state.command_log[-200:]
 
     def handle_move_command(self, match_id: str, player: int, piece_id: str, target: tuple[int, int], now_ms: int) -> tuple[bool, str]:
         state = self.repo.get_match(match_id)
@@ -34,30 +37,38 @@ class CommandService:
             return False, "kind locked by phase"
         if piece.kind not in state.unlocked_by_player[player]:
             return False, "kind not unlocked"
-        ok, msg = validate_move(piece, target, state)
+        ok, msg = validate_move(piece, target, state, now_ms)
         if not ok:
             return False, msg
+
         path = path_planner.build_path(piece, (piece.x, piece.y), target)
         duration_ms = path_planner.get_move_duration_ms(piece, path)
         timeline.start_move(piece, path, now_ms, duration_ms)
         state.last_action_at = now_ms
-        state.command_log.append({"type": "move", "piece_id": piece_id, "target": target, "player": player, "ts": now_ms})
+        self._append_command(
+            state,
+            {"type": "move", "piece_id": piece_id, "target": target, "player": player, "ts": now_ms},
+        )
         state.add_event(GameEvent(EVENT_MOVE_COMMAND_ACCEPTED, now_ms, {"piece_id": piece_id, "target": target}))
         state.add_event(GameEvent(EVENT_MOVE_STARTED, now_ms, {"piece_id": piece_id, "duration_ms": duration_ms}))
+        self.repo.save_match(state)
         return True, "ok"
 
     def handle_unlock_command(self, match_id: str, player: int, kind: PieceType, now_ms: int) -> tuple[bool, str]:
         state = self.repo.get_match(match_id)
         if state is None:
             return False, "match not found"
-        return UnlockService.choose_unlock(player, kind, state, now_ms)
+        ok, msg = UnlockService.choose_unlock(player, kind, state, now_ms)
+        if ok:
+            self._append_command(state, {"type": "unlock", "player": player, "kind": kind.value, "ts": now_ms})
+            self.repo.save_match(state)
+        return ok, msg
 
     def handle_resign_command(self, match_id: str, player: int, now_ms: int) -> tuple[bool, str]:
         state = self.repo.get_match(match_id)
         if state is None:
             return False, "match not found"
         apply_resign(player, state, now_ms)
+        self._append_command(state, {"type": "resign", "player": player, "ts": now_ms})
+        self.repo.save_match(state)
         return True, "ok"
-
-    def apply_cooldown(self, piece, now_ms: int) -> None:
-        piece.cooldown_end_at = now_ms + int(COOLDOWN_SECONDS[piece.kind] * 1000)

@@ -26,15 +26,25 @@ class TickLoop:
             task.cancel()
 
     async def run_loop(self, match_id: str) -> None:
-        while True:
-            now_ms = int(time.time() * 1000)
-            snapshot = self.match_service.tick_once(match_id, now_ms)
-            if snapshot is None:
-                return
-            await self.broadcaster.broadcast_snapshot(match_id, snapshot)
-            if snapshot["status"] == MatchStatus.ENDED.value:
-                return
-            await asyncio.sleep(TICK_MS / 1000)
+        try:
+            while True:
+                now_ms = int(time.time() * 1000)
+                result = self.match_service.tick_once_with_events(match_id, now_ms)
+                if result is None:
+                    return
+
+                snapshot = result["snapshot"]
+                events = result["events"]
+                await self.broadcaster.broadcast_snapshot(match_id, snapshot)
+                for event in events:
+                    await self.broadcaster.broadcast_event(match_id, event)
+
+                status = snapshot["match_meta"]["status"]
+                if status == MatchStatus.ENDED.value:
+                    return
+                await asyncio.sleep(TICK_MS / 1000)
+        finally:
+            self._tasks.pop(match_id, None)
 
     async def shutdown(self) -> None:
         for m in list(self._tasks.keys()):

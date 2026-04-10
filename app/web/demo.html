@@ -1,8 +1,175 @@
 <!doctype html>
-<html>
-<head><meta charset="utf-8"><title>Realtime Xiangqi Demo</title></head>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>Realtime Xiangqi Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 16px; }
+    .row { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+    .card { border: 1px solid #ccc; padding: 10px; min-width: 320px; }
+    input, button, select, textarea { margin: 4px 0; }
+    table { border-collapse: collapse; }
+    td { border: 1px solid #aaa; width: 60px; height: 40px; text-align: center; font-size: 12px; }
+    pre { background:#f6f6f6; padding:8px; max-height:220px; overflow:auto; }
+  </style>
+</head>
 <body>
-  <h1>Realtime Xiangqi Demo</h1>
-  <p>Use API/WS to interact. This page is a placeholder for integration.</p>
+  <h1>实时象棋联调面板</h1>
+
+  <div class="row">
+    <div class="card">
+      <h3>房间控制</h3>
+      <button onclick="createMatch()">创建房间</button><br />
+      <label>match_id <input id="matchId" /></label><br />
+      <label>player_name <input id="playerName" value="p1" /></label>
+      <button onclick="joinMatch()">加入</button><br />
+      <label>player_id <input id="playerId" /></label>
+      <button onclick="readyMatch()">准备</button>
+      <button onclick="startMatch()">开始</button>
+      <button onclick="leaveMatch()">离开</button>
+    </div>
+
+    <div class="card">
+      <h3>连接与查询</h3>
+      <button onclick="connectWs()">连接 WS</button>
+      <button onclick="fetchState()">拉取状态</button>
+      <button onclick="fetchUnlockState()">拉取解锁</button>
+      <div>WS 状态: <span id="wsStatus">disconnected</span></div>
+      <div>最新消息:</div>
+      <pre id="lastMsg"></pre>
+    </div>
+
+    <div class="card">
+      <h3>操作</h3>
+      <label>player <input id="cmdPlayer" value="1" /></label><br />
+      <label>piece_id <input id="pieceId" /></label>
+      <button onclick="legalMoves()">合法走法</button><br />
+      <label>target_x <input id="targetX" value="0" /></label>
+      <label>target_y <input id="targetY" value="0" /></label><br />
+      <button onclick="moveCmd()">MOVE</button>
+      <label>unlock <select id="unlockKind">
+        <option>horse</option><option>cannon</option><option>chariot</option>
+        <option>elephant</option><option>advisor</option><option>general</option>
+      </select></label>
+      <button onclick="unlockCmd()">UNLOCK</button>
+      <button onclick="resignCmd()">RESIGN</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <h3>对局信息</h3>
+      <pre id="meta"></pre>
+    </div>
+    <div class="card">
+      <h3>最近事件</h3>
+      <pre id="events"></pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>棋盘(9x10)</h3>
+    <table id="board"></table>
+  </div>
+
+<script>
+let ws = null;
+let snapshot = null;
+
+function base() { return location.origin; }
+function mId() { return document.getElementById('matchId').value.trim(); }
+function setMsg(v){ document.getElementById('lastMsg').textContent = JSON.stringify(v, null, 2); }
+
+async function createMatch(){
+  const r = await fetch(base() + '/matches', {method:'POST'});
+  const j = await r.json();
+  document.getElementById('matchId').value = j.match_id;
+  setMsg(j);
+}
+async function joinMatch(){
+  const r = await fetch(base()+`/matches/${mId()}/join`, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({player_name: document.getElementById('playerName').value})});
+  const j = await r.json();
+  if (j.player?.id) document.getElementById('playerId').value = j.player.id;
+  setMsg(j);
+}
+async function readyMatch(){
+  const r = await fetch(base()+`/matches/${mId()}/ready`, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({player_id: document.getElementById('playerId').value})});
+  setMsg(await r.json());
+}
+async function startMatch(){
+  const r = await fetch(base()+`/matches/${mId()}/start`, {method:'POST'});
+  setMsg(await r.json());
+}
+async function leaveMatch(){
+  const r = await fetch(base()+`/matches/${mId()}/leave`, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({player_id: document.getElementById('playerId').value})});
+  setMsg(await r.json());
+}
+
+function connectWs(){
+  const url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/matches/${mId()}/ws`;
+  ws = new WebSocket(url);
+  ws.onopen = () => document.getElementById('wsStatus').textContent = 'connected';
+  ws.onclose = () => document.getElementById('wsStatus').textContent = 'closed';
+  ws.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    setMsg(data);
+    if (data.type === 'snapshot') { applySnapshot(data.data); }
+  }
+}
+
+async function fetchState(){
+  const r = await fetch(base()+`/matches/${mId()}/state`);
+  applySnapshot(await r.json());
+}
+async function fetchUnlockState(){
+  const r = await fetch(base()+`/matches/${mId()}/unlock-state`);
+  setMsg(await r.json());
+}
+
+async function legalMoves(){
+  const piece = document.getElementById('pieceId').value;
+  const player = document.getElementById('cmdPlayer').value;
+  const r = await fetch(base()+`/matches/${mId()}/pieces/${piece}/legal-moves?player=${player}`);
+  setMsg(await r.json());
+}
+
+async function postCmd(path, body){
+  const r = await fetch(base()+`/matches/${mId()}/commands/${path}`, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)});
+  const j = await r.json();
+  setMsg(j);
+  if (j.snapshot) applySnapshot(j.snapshot);
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({type:'ping'}));
+}
+
+function moveCmd(){ postCmd('move', {player:Number(document.getElementById('cmdPlayer').value), piece_id: document.getElementById('pieceId').value, target_x:Number(document.getElementById('targetX').value), target_y:Number(document.getElementById('targetY').value)}); }
+function unlockCmd(){ postCmd('unlock', {player:Number(document.getElementById('cmdPlayer').value), kind:document.getElementById('unlockKind').value}); }
+function resignCmd(){ postCmd('resign', {player:Number(document.getElementById('cmdPlayer').value)}); }
+
+function applySnapshot(s){
+  snapshot = s;
+  document.getElementById('meta').textContent = JSON.stringify({match_meta:s.match_meta, players:s.players, phase:s.phase, unlock:s.unlock, board:s.board}, null, 2);
+  document.getElementById('events').textContent = JSON.stringify(s.events, null, 2);
+  renderBoard(s.pieces || []);
+}
+
+function renderBoard(pieces){
+  const board = Array.from({length:10},()=>Array.from({length:9},()=>''));
+  for(const p of pieces){
+    if(!p.alive) continue;
+    board[p.y][p.x] = `${p.owner}-${p.kind.slice(0,3)}${p.is_moving?'*':''}`;
+  }
+  const tb = document.getElementById('board');
+  tb.innerHTML='';
+  for(let y=0;y<10;y++){
+    const tr=document.createElement('tr');
+    for(let x=0;x<9;x++){
+      const td=document.createElement('td');
+      td.textContent = board[y][x];
+      tr.appendChild(td);
+    }
+    tb.appendChild(tr);
+  }
+}
+</script>
 </body>
 </html>
