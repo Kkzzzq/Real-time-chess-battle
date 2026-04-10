@@ -4,45 +4,64 @@ from app.domain.enums import PieceType
 from app.domain.models import Piece
 
 
-def _pid(player: int, kind: PieceType, idx: int) -> str:
-    return f"p{player}_{kind.value}_{idx}"
+def _make_piece(owner: int, kind: PieceType, idx: int, x: int, y: int, spawn_index: int) -> Piece:
+    pid = f"p{owner}_{kind.value}_{idx}"
+    return Piece(
+        id=pid,
+        owner=owner,
+        kind=kind,
+        x=x,
+        y=y,
+        start_x=x,
+        start_y=y,
+        target_x=x,
+        target_y=y,
+        spawn_index=spawn_index,
+    )
 
 
-def initial_pieces() -> dict[str, Piece]:
+def create_standard_board() -> dict[str, Piece]:
     pieces: dict[str, Piece] = {}
+    spawn = 0
 
-    def add(player: int, piece_type: PieceType, x: int, y: int, idx: int) -> None:
-        piece = Piece(piece_id=_pid(player, piece_type, idx), player=player, piece_type=piece_type, x=x, y=y)
-        pieces[piece.piece_id] = piece
+    def add(owner: int, kind: PieceType, idx: int, x: int, y: int) -> None:
+        nonlocal spawn
+        spawn += 1
+        p = _make_piece(owner, kind, idx, x, y, spawn)
+        pieces[p.id] = p
 
-    # Player 1 (red) bottom.
-    for x, i in ((0, 1), (8, 2)):
-        add(1, PieceType.CHARIOT, x, 9, i)
-    for x, i in ((1, 1), (7, 2)):
-        add(1, PieceType.HORSE, x, 9, i)
-    for x, i in ((2, 1), (6, 2)):
-        add(1, PieceType.ELEPHANT, x, 9, i)
-    for x, i in ((3, 1), (5, 2)):
-        add(1, PieceType.ADVISOR, x, 9, i)
-    add(1, PieceType.GENERAL, 4, 9, 1)
-    for x, i in ((1, 1), (7, 2)):
-        add(1, PieceType.CANNON, x, 7, i)
-    for idx, x in enumerate((0, 2, 4, 6, 8), start=1):
-        add(1, PieceType.SOLDIER, x, 6, idx)
+    # black (player=2) top
+    add(2, PieceType.CHARIOT, 1, 0, 0)
+    add(2, PieceType.HORSE, 1, 1, 0)
+    add(2, PieceType.ELEPHANT, 1, 2, 0)
+    add(2, PieceType.ADVISOR, 1, 3, 0)
+    add(2, PieceType.GENERAL, 1, 4, 0)
+    add(2, PieceType.ADVISOR, 2, 5, 0)
+    add(2, PieceType.ELEPHANT, 2, 6, 0)
+    add(2, PieceType.HORSE, 2, 7, 0)
+    add(2, PieceType.CHARIOT, 2, 8, 0)
+    add(2, PieceType.CANNON, 1, 1, 2)
+    add(2, PieceType.CANNON, 2, 7, 2)
+    for i, x in enumerate([0, 2, 4, 6, 8], start=1):
+        add(2, PieceType.SOLDIER, i, x, 3)
 
-    # Player 2 (black) top.
-    for x, i in ((0, 1), (8, 2)):
-        add(2, PieceType.CHARIOT, x, 0, i)
-    for x, i in ((1, 1), (7, 2)):
-        add(2, PieceType.HORSE, x, 0, i)
-    for x, i in ((2, 1), (6, 2)):
-        add(2, PieceType.ELEPHANT, x, 0, i)
-    for x, i in ((3, 1), (5, 2)):
-        add(2, PieceType.ADVISOR, x, 0, i)
-    add(2, PieceType.GENERAL, 4, 0, 1)
-    for x, i in ((1, 1), (7, 2)):
-        add(2, PieceType.CANNON, x, 2, i)
-    for idx, x in enumerate((0, 2, 4, 6, 8), start=1):
-        add(2, PieceType.SOLDIER, x, 3, idx)
+    # red (player=1) bottom
+    add(1, PieceType.CHARIOT, 1, 0, 9)
+    add(1, PieceType.HORSE, 1, 1, 9)
+    add(1, PieceType.ELEPHANT, 1, 2, 9)
+    add(1, PieceType.ADVISOR, 1, 3, 9)
+    add(1, PieceType.GENERAL, 1, 4, 9)
+    add(1, PieceType.ADVISOR, 2, 5, 9)
+    add(1, PieceType.ELEPHANT, 2, 6, 9)
+    add(1, PieceType.HORSE, 2, 7, 9)
+    add(1, PieceType.CHARIOT, 2, 8, 9)
+    add(1, PieceType.CANNON, 1, 1, 7)
+    add(1, PieceType.CANNON, 2, 7, 7)
+    for i, x in enumerate([0, 2, 4, 6, 8], start=1):
+        add(1, PieceType.SOLDIER, i, x, 6)
 
     return pieces
+
+
+def reset_board(state) -> None:
+    state.pieces = create_standard_board()

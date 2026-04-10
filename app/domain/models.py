@@ -3,90 +3,55 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.domain.enums import PieceType
+from app.domain.enums import MatchStatus, PieceType
+from app.domain.events import GameEvent
 
 
 @dataclass
 class Piece:
-    piece_id: str
-    player: int
-    piece_type: PieceType
+    id: str
+    owner: int
+    kind: PieceType
     x: int
     y: int
     alive: bool = True
-    moving: bool = False
-    move_start_at: float | None = None
-    move_end_at: float | None = None
-    move_start_pos: tuple[int, int] | None = None
-    target: tuple[int, int] | None = None
-    cooldown_until: float = 0.0
-
-
-@dataclass
-class UnlockState:
-    unlocked: set[PieceType] = field(default_factory=lambda: {PieceType.SOLDIER})
-    selected_waves: set[int] = field(default_factory=set)
+    is_moving: bool = False
+    move_start_at: int | None = None
+    move_end_at: int | None = None
+    move_total_ms: int = 0
+    path_points: list[tuple[int, int]] = field(default_factory=list)
+    start_x: int = 0
+    start_y: int = 0
+    target_x: int = 0
+    target_y: int = 0
+    cooldown_end_at: int = 0
+    last_command_at: int = 0
+    spawn_index: int = 0
 
 
 @dataclass
 class MatchState:
     match_id: str
-    started_at: float
-    pieces: dict[str, Piece]
-    unlocks: dict[int, UnlockState]
+    status: MatchStatus = MatchStatus.WAITING
     winner: int | None = None
-    draw: bool = False
-    draw_reason: str | None = None
-    resigned_player: int | None = None
-    ended_at: float | None = None
-    last_action_at: float | None = None
-    last_capture_at: float | None = None
-    tick_index: int = 0
+    reason: str | None = None
+    created_at: int = 0
+    started_at: int | None = None
+    now_ms: int = 0
+    phase_name: str = "waiting"
+    phase_deadline_ms: int | None = None
+    wave_index: int = -1
+    pieces: dict[str, Piece] = field(default_factory=dict)
+    unlocked_by_player: dict[int, set[PieceType]] = field(default_factory=dict)
+    pending_unlock_choice: dict[int, dict[int, PieceType]] = field(default_factory=dict)
+    players: dict[int, dict[str, Any]] = field(default_factory=dict)
+    event_log: list[GameEvent] = field(default_factory=list)
+    command_log: list[dict[str, Any]] = field(default_factory=list)
+    last_action_at: int | None = None
+    last_capture_at: int | None = None
+    version: int = 0
 
-    def to_dict(self, now: float) -> dict[str, Any]:
-        return {
-            "match_id": self.match_id,
-            "started_at": self.started_at,
-            "elapsed": round(max(0.0, now - self.started_at), 3),
-            "winner": self.winner,
-            "draw": self.draw,
-            "draw_reason": self.draw_reason,
-            "resigned_player": self.resigned_player,
-            "pieces": [
-                {
-                    "piece_id": p.piece_id,
-                    "player": p.player,
-                    "piece_type": p.piece_type.value,
-                    "x": p.x,
-                    "y": p.y,
-                    "alive": p.alive,
-                    "moving": p.moving,
-                    "target": p.target,
-                    "cooldown_until": p.cooldown_until,
-                }
-                for p in self.pieces.values()
-            ],
-            "unlocks": {
-                player: sorted([pt.value for pt in unlock.unlocked])
-                for player, unlock in self.unlocks.items()
-            },
-        }
-
-
-@dataclass
-class MovePath:
-    duration: float
-    segments: list[tuple[int, int]]
-
-
-@dataclass
-class RuleResult:
-    ok: bool
-    message: str
-    movement: MovePath | None = None
-
-
-@dataclass
-class CommandResult:
-    ok: bool
-    message: str
+    def add_event(self, event: GameEvent) -> None:
+        self.event_log.append(event)
+        self.event_log = self.event_log[-200:]
+        self.version += 1

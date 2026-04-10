@@ -1,24 +1,42 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from app.domain.enums import PieceType
 
 
-class MoveRequest(BaseModel):
-    type: str = "move"
-    player: int = Field(ge=1, le=2)
+class CreateMatchRequest(BaseModel):
+    pass
+
+
+class JoinMatchRequest(BaseModel):
+    player_name: str
+
+
+class ReadyMatchRequest(BaseModel):
+    player_id: str
+
+
+class LeaveMatchRequest(BaseModel):
+    player_id: str
+
+
+class MoveCommandRequest(BaseModel):
+    player: int
     piece_id: str
-    target_x: int = Field(ge=0, le=8)
-    target_y: int = Field(ge=0, le=9)
+    target_x: int
+    target_y: int
 
 
-class UnlockRequest(BaseModel):
-    type: str = "unlock"
-    player: int = Field(ge=1, le=2)
-    piece_type: PieceType
+class UnlockCommandRequest(BaseModel):
+    player: int
+    kind: PieceType
 
 
 class ResignRequest(BaseModel):
-    type: str = "resign"
-    player: int = Field(ge=1, le=2)
+    player: int
+
+
+class MatchSnapshotResponse(BaseModel):
+    match_id: str
+    status: str
