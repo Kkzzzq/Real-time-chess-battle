@@ -34,7 +34,6 @@ def test_auto_unlock_prefers_cannon_at_first_wave() -> None:
 
 def test_horse_leg_blocked_is_illegal() -> None:
     game = make_game()
-    # Jump over the opening stage and unlock horse manually.
     game.state.unlocks[1].unlocked.add(PieceType.HORSE)
     result = game.command_move(1, "p1_horse_1", 3, 8, now=80.0)
     assert result.ok is False
@@ -46,7 +45,6 @@ def test_flying_general_capture_is_legal_when_file_is_clear() -> None:
     game.state.unlocks[1].unlocked.add(PieceType.GENERAL)
     game.state.unlocks[2].unlocked.add(PieceType.GENERAL)
 
-    # Clear the file between the two generals.
     for piece in list(game.state.pieces.values()):
         if piece.x == 4 and piece.piece_type != PieceType.GENERAL:
             piece.alive = False
@@ -54,3 +52,17 @@ def test_flying_general_capture_is_legal_when_file_is_clear() -> None:
     validation = RulesEngine.validate_move(game.state, 1, "p1_general_1", 4, 0, now=120.0)
     assert validation.ok is True
     assert validation.movement is not None
+
+
+def test_general_cannot_face_each_other_after_non_general_move() -> None:
+    game = make_game()
+    game.state.unlocks[1].unlocked.add(PieceType.CHARIOT)
+    for piece in list(game.state.pieces.values()):
+        if piece.x == 4 and piece.y not in (0, 9):
+            piece.alive = False
+    # place a rook between generals then move it away should be illegal due to face-to-face
+    rook = game.state.pieces["p1_chariot_1"]
+    rook.x, rook.y = 4, 5
+    result = game.command_move(1, rook.piece_id, 3, 5, now=90.0)
+    assert result.ok is False
+    assert "照面" in result.message
