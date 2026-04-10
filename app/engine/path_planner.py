@@ -59,3 +59,15 @@ def get_move_duration_ms(piece: Piece, path_points: list[tuple[int, int]]) -> in
     if piece.kind in FIXED_MOVE_SECONDS:
         return int(FIXED_MOVE_SECONDS[piece.kind] * 1000)
     return len(path_points) * 1000
+
+
+def get_path_segments(path_points: list[tuple[int, int]], start: tuple[int, int], start_ms: int, end_ms: int) -> list[dict]:
+    points = [start, *path_points]
+    if len(points) < 2:
+        return []
+    total = end_ms - start_ms
+    each = total / (len(points)-1)
+    out=[]
+    for i in range(len(points)-1):
+        out.append({"index": i, "from": points[i], "to": points[i+1], "enter_ms": int(start_ms + i*each), "leave_ms": int(start_ms + (i+1)*each)})
+    return out
