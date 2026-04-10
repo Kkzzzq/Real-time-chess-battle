@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisco
 from fastapi.responses import HTMLResponse
 
 from app.api.schemas import MoveRequest, ResignRequest, UnlockRequest
-from app.domain.enums import PieceType
 from app.engine.manager import GameManager, MatchRuntime
 
 
