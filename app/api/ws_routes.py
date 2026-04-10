@@ -12,6 +12,7 @@ from app.engine.snapshot import build_match_snapshot
 router = APIRouter(tags=["ws"])
 
 
+@router.websocket("/matches/{match_id}/ws")
 @router.websocket("/ws/matches/{match_id}")
 async def ws_match(websocket: WebSocket, match_id: str, container=Depends(get_container)):
     await container.broadcaster.connect(match_id, websocket)
