@@ -6,10 +6,16 @@ from dataclasses import dataclass
 from app.repository.base import MatchRepo
 from app.repository.memory_repo import MemoryRepo
 from app.repository.pickle_repo import PickleRepo
+from app.repository.redis.presence_repo_redis import RedisPresenceRepo
+from app.repository.redis.runtime_repo_redis import RedisRuntimeRepo
 from app.runtime.broadcaster import Broadcaster
+from app.runtime.presence_service import PresenceService
 from app.runtime.tick_loop import TickLoop
 from app.services.command_service import CommandService
+from app.services.match_archive_service import MatchArchiveService
 from app.services.match_service import MatchService
+from app.services.persistence_service import PersistenceService
+from app.services.player_session_service import PlayerSessionService
 from app.services.room_service import RoomService
 
 
@@ -21,6 +27,9 @@ class AppContainer:
     match_service: MatchService
     broadcaster: Broadcaster
     tick_loop: TickLoop
+    persistence_service: PersistenceService
+    presence_service: PresenceService
+    archive_service: MatchArchiveService | None
 
 
 def _build_repo() -> MatchRepo:
@@ -32,11 +41,21 @@ def _build_repo() -> MatchRepo:
 
 def build_container() -> AppContainer:
     repo = _build_repo()
-    room_service = RoomService(repo)
+    session_service = PlayerSessionService(int(os.getenv("PLAYER_TOKEN_TTL_SECONDS", "86400")))
+    room_service = RoomService(repo, session_service=session_service)
     command_service = CommandService(repo)
     match_service = MatchService(repo)
     broadcaster = Broadcaster()
     tick_loop = TickLoop(match_service, broadcaster)
+
+    runtime_repo = RedisRuntimeRepo()
+    presence_repo = RedisPresenceRepo()
+    persistence_service = PersistenceService(repo, runtime_repo, presence_repo)
+    presence_service = PresenceService(presence_repo)
+
+    # Archive service is prepared for MySQL integration; disabled until DB wiring lands.
+    archive_service = None
+
     return AppContainer(
         repo=repo,
         room_service=room_service,
@@ -44,4 +63,7 @@ def build_container() -> AppContainer:
         match_service=match_service,
         broadcaster=broadcaster,
         tick_loop=tick_loop,
+        persistence_service=persistence_service,
+        presence_service=presence_service,
+        archive_service=archive_service,
     )
