@@ -40,6 +40,15 @@ def test_start_requires_host() -> None:
         not_host = client.post(f"/matches/{match_id}/start", json={"player_id": p2["player_id"], "player_token": p2["player_token"]})
         assert not_host.status_code in (400, 403)
 
+def test_start_requires_host() -> None:
+    with TestClient(app) as client:
+        match_id = client.post("/matches").json()["match_id"]
+        p1 = client.post(f"/matches/{match_id}/join", json={"player_name": "A"}).json()["player"]
+        p2 = client.post(f"/matches/{match_id}/join", json={"player_name": "B"}).json()["player"]
+        client.post(f"/matches/{match_id}/ready", json={"player_id": p1["player_id"], "player_token": p1["player_token"]})
+        client.post(f"/matches/{match_id}/ready", json={"player_id": p2["player_id"], "player_token": p2["player_token"]})
+        not_host = client.post(f"/matches/{match_id}/start", json={"player_id": p2["player_id"], "player_token": p2["player_token"]})
+        assert not_host.status_code in (400, 403)
 
 def test_query_requires_auth() -> None:
     with TestClient(app) as client:

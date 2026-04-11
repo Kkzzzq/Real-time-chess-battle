@@ -26,6 +26,12 @@ logger = logging.getLogger(__name__)
 TOKEN_TTL_SECONDS = int(os.getenv("PLAYER_TOKEN_TTL_SECONDS", "86400"))
 
 
+logger = logging.getLogger(__name__)
+TOKEN_TTL_SECONDS = int(os.getenv("PLAYER_TOKEN_TTL_SECONDS", "86400"))
+
+
+TOKEN_TTL_SECONDS = int(os.getenv("PLAYER_TOKEN_TTL_SECONDS", "86400"))
+
 class RoomService:
     def __init__(self, repo: MatchRepo) -> None:
         self.repo = repo
