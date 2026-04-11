@@ -37,6 +37,7 @@ class RoomService:
         return state
 
     def join_match(self, match_id: str, player_name: str) -> dict:
+        now_ms = int(time.time() * 1000)
         state = self.repo.get_match(match_id)
         if state is None:
             raise ValueError("match not found")
@@ -53,9 +54,10 @@ class RoomService:
             "is_host": len(state.players) == 0,
         }
         state.players[seat] = player
-        state.add_event(GameEvent(EVENT_PLAYER_JOINED, state.now_ms, {"seat": seat, "name": player_name}))
+        state.now_ms = now_ms
+        state.add_event(GameEvent(EVENT_PLAYER_JOINED, now_ms, {"seat": seat, "name": player_name}))
         self.repo.save_match(state)
-        return {"seat": seat, **player}
+        return {"seat": seat, "player_id": player["id"], **player}
 
     def _reassign_host_if_needed(self, state: MatchState, now_ms: int) -> None:
         hosts = [s for s, info in state.players.items() if info.get("is_host")]

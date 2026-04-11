@@ -24,6 +24,7 @@ class TickLoop:
         task = self._tasks.get(match_id)
         if task and not task.done():
             task.cancel()
+        self.broadcaster.cleanup_match(match_id)
 
     async def run_loop(self, match_id: str) -> None:
         try:
@@ -51,6 +52,11 @@ class TickLoop:
             self._tasks.pop(match_id, None)
 
     async def shutdown(self) -> None:
+        tasks = []
         for m in list(self._tasks.keys()):
             self.stop_match_loop(m)
-        await asyncio.sleep(0)
+            t = self._tasks.get(m)
+            if t is not None:
+                tasks.append(t)
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)

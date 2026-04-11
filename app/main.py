@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 
 from app.api.command_routes import router as command_router
 from app.api.match_routes import router as match_router
@@ -35,8 +34,3 @@ app.include_router(match_router)
 app.include_router(command_router)
 app.include_router(query_router)
 app.include_router(ws_router)
-
-
-@app.get("/demo")
-def demo() -> FileResponse:
-    return FileResponse("app/web/demo.html")
