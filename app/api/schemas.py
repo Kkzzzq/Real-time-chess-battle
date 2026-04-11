@@ -23,6 +23,11 @@ class ReadyMatchRequest(BaseModel):
     player_token: str
 
 
+class StartMatchRequest(BaseModel):
+    player_id: str
+    player_token: str
+
+
 class LeaveMatchRequest(BaseModel):
     player_id: str
     player_token: str

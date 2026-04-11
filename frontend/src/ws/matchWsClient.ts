@@ -4,18 +4,22 @@ import { useMatchStore } from '../store/matchStore'
 const WS_BASE = import.meta.env.VITE_WS_BASE_URL || 'ws://127.0.0.1:8000'
 
 /**
- * WS auth strategy:
- * - player_token is validated at connection handshake via query string.
- * - command frames then carry player_id only (backend binds frame player_id to connection player_id).
+ * Single active-match strategy:
+ * frontend keeps one active ws connection; switching match closes old one first.
+ * Auth: token is validated at handshake; command frames carry player_id.
  */
 export class MatchWsClient {
   private ws?: WebSocket
   private heartbeat?: number
   private reconnectTimer?: number
+  private manualClose = false
+  private lastArgs?: [string, string, string]
 
-  connect(matchId: string, playerId?: string, playerToken?: string) {
-    const qp = playerId && playerToken ? `?player_id=${playerId}&player_token=${playerToken}` : ''
-    this.ws = new WebSocket(`${WS_BASE}/matches/${matchId}/ws${qp}`)
+  connect(matchId: string, playerId: string, playerToken: string) {
+    this.disconnect()
+    this.manualClose = false
+    this.lastArgs = [matchId, playerId, playerToken]
+    this.ws = new WebSocket(`${WS_BASE}/matches/${matchId}/ws?player_id=${playerId}&player_token=${playerToken}`)
     useWsStore.getState().setState({ reconnecting: false })
 
     this.ws.onopen = () => {
@@ -23,9 +27,15 @@ export class MatchWsClient {
       this.heartbeat = window.setInterval(() => this.sendPing(), 10000)
     }
     this.ws.onclose = () => {
-      useWsStore.getState().setState({ connected: false, reconnecting: true })
+      useWsStore.getState().setState({ connected: false, reconnecting: !this.manualClose })
       if (this.heartbeat) window.clearInterval(this.heartbeat)
-      this.reconnectTimer = window.setTimeout(() => this.connect(matchId, playerId, playerToken), 2000)
+      if (!this.manualClose && this.lastArgs) {
+        this.reconnectTimer = window.setTimeout(() => {
+          if (!this.lastArgs) return
+          const [m, p, t] = this.lastArgs
+          this.connect(m, p, t)
+        }, 2000)
+      }
     }
     this.ws.onerror = () => useWsStore.getState().setState({ error: 'ws error' })
     this.ws.onmessage = (evt) => {
@@ -57,7 +67,15 @@ export class MatchWsClient {
       }
     }
   }
-  disconnect() { if (this.reconnectTimer) clearTimeout(this.reconnectTimer); if (this.heartbeat) clearInterval(this.heartbeat); this.ws?.close() }
+
+  disconnect() {
+    this.manualClose = true
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
+    if (this.heartbeat) clearInterval(this.heartbeat)
+    this.ws?.close()
+    this.ws = undefined
+  }
+
   sendMove(player_id: string, piece_id: string, target_x: number, target_y: number) { this.ws?.send(JSON.stringify({ type: 'move', player_id, piece_id, target_x, target_y })) }
   sendUnlock(player_id: string, kind: string) { this.ws?.send(JSON.stringify({ type: 'unlock', player_id, kind })) }
   sendResign(player_id: string) { this.ws?.send(JSON.stringify({ type: 'resign', player_id })) }

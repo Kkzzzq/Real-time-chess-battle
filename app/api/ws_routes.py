@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
@@ -11,6 +12,7 @@ from app.domain.enums import MatchStatus, PieceType
 from app.engine.snapshot import build_match_snapshot
 
 router = APIRouter(tags=["ws"])
+logger = logging.getLogger(__name__)
 
 
 @router.websocket("/matches/{match_id}/ws")
@@ -27,13 +29,18 @@ async def ws_match(websocket: WebSocket, match_id: str, container=Depends(get_ws
     player_token = websocket.query_params.get("player_token")
 
     await container.broadcaster.connect(match_id, websocket)
+    logger.info("ws connected match_id=%s player_id=%s", match_id, player_id)
+
     now_ms = int(time.time() * 1000)
     try:
         viewer_seat = resolve_viewer_seat_with_auth(state, player_id, player_token)
+        if viewer_seat is None:
+            raise HTTPException(status_code=401, detail="player auth required")
     except HTTPException as exc:
         await websocket.send_json({"type": "error", "data": {"message": exc.detail}})
         await websocket.close(code=1008)
         return
+
     snap = build_match_snapshot(state, now_ms, viewer_seat=viewer_seat)
     await websocket.send_json(
         {
@@ -63,12 +70,8 @@ async def ws_match(websocket: WebSocket, match_id: str, container=Depends(get_ws
                 await websocket.send_json({"type": "pong", "data": {"ts_ms": now}})
                 continue
 
-            if player_id is not None and data.get("player_id") != player_id:
+            if data.get("player_id") != player_id:
                 await websocket.send_json({"type": "command_result", "data": {"ok": False, "message": "player mismatch"}})
-                continue
-
-            if player_id is not None and not player_token:
-                await websocket.send_json({"type": "command_result", "data": {"ok": False, "message": "player_token required"}})
                 continue
 
             before_state = container.repo.get_match(match_id)
@@ -96,17 +99,10 @@ async def ws_match(websocket: WebSocket, match_id: str, container=Depends(get_ws
             latest = container.repo.get_match(match_id)
             delta_events = latest.event_log[before_events:] if latest is not None else []
             await websocket.send_json({"type": "command_result", "data": {"ok": ok, "message": msg}})
-            await websocket.send_json(
-                {
-                    "type": "events",
-                    "data": {
-                        "events": [{"type": e.event_type, "ts_ms": e.ts_ms, "payload": e.payload} for e in delta_events],
-                        "note": "snapshot is broadcast by tick loop; clients should treat command events and broadcast frames as eventually consistent.",
-                    },
-                }
-            )
+            await websocket.send_json({"type": "events", "data": {"events": [{"type": e.event_type, "ts_ms": e.ts_ms, "payload": e.payload} for e in delta_events]}})
 
             if latest is not None and latest.status == MatchStatus.ENDED:
                 await websocket.send_json({"type": "event", "data": {"type": "match_ended", "ts_ms": now, "payload": {"match_id": match_id}}})
     except WebSocketDisconnect:
+        logger.info("ws disconnected match_id=%s player_id=%s", match_id, player_id)
         await container.broadcaster.disconnect(match_id, websocket)

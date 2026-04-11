@@ -3,21 +3,33 @@ import { useNavigate } from 'react-router-dom'
 import { matchApi } from '../api/matchApi'
 import { useSessionStore } from '../store/sessionStore'
 import { useUiStore } from '../store/uiStore'
+import { StatusBanner } from '../components/layout/StatusBanner'
 
 export function LobbyPage() {
   const [list, setList] = useState<Array<{ match_id: string; status: string }>>([])
   const [name, setName] = useState('Player')
   const [matchId, setMatchId] = useState('')
+  const [loading, setLoading] = useState(false)
   const session = useSessionStore()
   const ui = useUiStore()
   const navigate = useNavigate()
 
-  useEffect(() => {
-    if (session.matchId) navigate(`/room/${session.matchId}`)
-  }, [])
+  const refresh = async () => {
+    setLoading(true)
+    try {
+      const m = await matchApi.listMatches()
+      setList(m as Array<{ match_id: string; status: string }>)
+      ui.setError(undefined)
+    } catch (e: any) {
+      ui.setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    matchApi.listMatches().then((m) => setList(m as Array<{ match_id: string; status: string }>)).catch((e) => ui.setError(String(e.message || e)))
+    if (session.matchId) navigate(`/room/${session.matchId}`)
+    refresh()
   }, [])
 
   const createAndJoin = async () => {
@@ -43,6 +55,7 @@ export function LobbyPage() {
   }
 
   return <div><h2>大厅</h2>
+    <StatusBanner loading={loading} error={ui.error} onRetry={refresh} />
     <div style={{display:'flex',gap:8,marginBottom:8}}>
       <input value={name} onChange={(e)=>setName(e.target.value)} placeholder='player name' />
       <button onClick={createAndJoin}>创建并加入</button>
@@ -50,7 +63,8 @@ export function LobbyPage() {
     <div style={{display:'flex',gap:8,marginBottom:8}}>
       <input value={matchId} onChange={(e)=>setMatchId(e.target.value)} placeholder='match id' />
       <button onClick={join}>加入房间</button>
+      <button onClick={refresh}>刷新列表</button>
     </div>
-    <ul>{list.map((m)=><li key={m.match_id}>{m.match_id} - {m.status}</li>)}</ul>
+    {list.length === 0 ? <div>暂无可用房间</div> : <ul>{list.map((m)=><li key={m.match_id}>{m.match_id} - {m.status}</li>)}</ul>}
   </div>
 }

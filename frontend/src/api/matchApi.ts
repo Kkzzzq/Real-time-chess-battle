@@ -8,6 +8,6 @@ export const matchApi = {
   joinMatch: (matchId: string, playerName: string) => apiFetch<{ player: PlayerJoin; status: string }>(`/matches/${matchId}/join`, { method: 'POST', body: JSON.stringify({ player_name: playerName }) }),
   reconnect: (matchId: string, playerId: string, playerToken: string) => apiFetch<{ player: PlayerJoin; status: string }>(`/matches/${matchId}/reconnect`, { method: 'POST', body: JSON.stringify({ player_id: playerId, player_token: playerToken }) }),
   ready: (matchId: string, playerId: string, playerToken: string) => apiFetch(`/matches/${matchId}/ready`, { method: 'POST', body: JSON.stringify({ player_id: playerId, player_token: playerToken }) }),
-  start: (matchId: string) => apiFetch<{ ok: boolean; status: string; started_at: number; snapshot: MatchSnapshot }>(`/matches/${matchId}/start`, { method: 'POST' }),
+  start: (matchId: string, playerId: string, playerToken: string) => apiFetch<{ ok: boolean; status: string; started_at: number; snapshot: MatchSnapshot }>(`/matches/${matchId}/start`, { method: 'POST', body: JSON.stringify({ player_id: playerId, player_token: playerToken }) }),
   leave: (matchId: string, playerId: string, playerToken: string) => apiFetch(`/matches/${matchId}/leave`, { method: 'POST', body: JSON.stringify({ player_id: playerId, player_token: playerToken }) })
 }

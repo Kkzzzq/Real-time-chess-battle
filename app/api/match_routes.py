@@ -16,6 +16,7 @@ from app.api.schemas import (
     ReadyMatchRequest,
     ReconnectMatchRequest,
     ReconnectMatchResponse,
+    StartMatchRequest,
     StartMatchResponse,
 )
 from app.engine.snapshot import build_match_snapshot
@@ -103,9 +104,13 @@ def ready_match(match_id: str, payload: ReadyMatchRequest, container=Depends(get
 
 
 @router.post("/{match_id}/start", response_model=StartMatchResponse)
-async def start_match(match_id: str, container=Depends(get_container)):
+async def start_match(match_id: str, payload: StartMatchRequest, container=Depends(get_container)):
     try:
-        state = container.room_service.start_match(match_id)
+        state = container.repo.get_match(match_id)
+        if state is None:
+            raise ValueError("match not found")
+        require_player_auth(state, payload.player_id, payload.player_token)
+        state = container.room_service.start_match(match_id, payload.player_id)
         await container.tick_loop.ensure_match_loop(match_id)
         now_ms = int(time.time() * 1000)
         container.match_service.tick_once(match_id, now_ms)

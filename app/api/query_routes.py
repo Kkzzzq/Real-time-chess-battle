@@ -22,43 +22,49 @@ def _get_state_or_404(container, match_id: str):
     return s
 
 
+def _require_viewer(state, player_id: str, player_token: str) -> int:
+    seat = resolve_viewer_seat_with_auth(state, player_id, player_token)
+    if seat is None:
+        raise HTTPException(401, "player auth required")
+    return seat
+
+
 @router.get("/state", response_model=MatchSnapshotResponse)
-def state(
-    match_id: str,
-    player_id: str | None = Query(default=None),
-    player_token: str | None = Query(default=None),
-    container=Depends(get_container),
-):
+def state(match_id: str, player_id: str = Query(...), player_token: str = Query(...), container=Depends(get_container)):
     now_ms = int(time.time() * 1000)
     s = _get_state_or_404(container, match_id)
-    viewer_seat = resolve_viewer_seat_with_auth(s, player_id, player_token)
+    viewer_seat = _require_viewer(s, player_id, player_token)
     return build_match_snapshot(s, now_ms, viewer_seat=viewer_seat)
 
 
 @router.get("/phase")
-def phase(match_id: str, container=Depends(get_container)):
+def phase(match_id: str, player_id: str = Query(...), player_token: str = Query(...), container=Depends(get_container)):
     now_ms = int(time.time() * 1000)
     s = _get_state_or_404(container, match_id)
+    _require_viewer(s, player_id, player_token)
     return build_match_snapshot(s, now_ms)["phase"]
 
 
 @router.get("/unlock-state")
-def unlock_state(match_id: str, container=Depends(get_container)):
+def unlock_state(match_id: str, player_id: str = Query(...), player_token: str = Query(...), container=Depends(get_container)):
     now_ms = int(time.time() * 1000)
     s = _get_state_or_404(container, match_id)
+    _require_viewer(s, player_id, player_token)
     return build_unlock_snapshot(s, now_ms)
 
 
 @router.get("/events")
-def events(match_id: str, container=Depends(get_container)):
+def events(match_id: str, player_id: str = Query(...), player_token: str = Query(...), container=Depends(get_container)):
     s = _get_state_or_404(container, match_id)
+    _require_viewer(s, player_id, player_token)
     return [{"type": e.event_type, "ts_ms": e.ts_ms, "payload": e.payload} for e in s.event_log]
 
 
 @router.get("/board")
-def board(match_id: str, container=Depends(get_container)):
+def board(match_id: str, player_id: str = Query(...), player_token: str = Query(...), container=Depends(get_container)):
     now_ms = int(time.time() * 1000)
     s = _get_state_or_404(container, match_id)
+    _require_viewer(s, player_id, player_token)
     return {"board": build_board_snapshot(s, now_ms), "runtime_board": build_board_snapshot(s, now_ms, runtime=True)}
 
 
@@ -66,8 +72,8 @@ def board(match_id: str, container=Depends(get_container)):
 def legal_moves(
     match_id: str,
     piece_id: str,
-    player_id: str | None = Query(default=None),
-    player_token: str | None = Query(default=None),
+    player_id: str = Query(...),
+    player_token: str = Query(...),
     container=Depends(get_container),
 ):
     now_ms = int(time.time() * 1000)
@@ -76,7 +82,7 @@ def legal_moves(
         raise HTTPException(404, "piece not found")
 
     piece = s.pieces[piece_id]
-    viewer_seat = resolve_viewer_seat_with_auth(s, player_id, player_token)
+    viewer_seat = _require_viewer(s, player_id, player_token)
 
     static_targets = list_legal_targets(piece, s, now_ms)
     actionable_targets: list[tuple[int, int]] = []
@@ -89,48 +95,45 @@ def legal_moves(
         and is_piece_kind_allowed_by_phase(piece.owner, piece.kind, s, now_ms)
         and piece.kind in s.unlocked_by_player.get(piece.owner, set())
     )
-    if player_id is not None and viewer_seat == piece.owner and owner_view_executable:
+    if viewer_seat == piece.owner and owner_view_executable:
         for target in static_targets:
             ok, _ = validate_move(piece, target, s, now_ms)
             if ok:
                 actionable_targets.append(target)
 
     executable = len(actionable_targets) > 0
-    actionable = None
-    if player_id is not None:
-        if viewer_seat != piece.owner:
-            reason = "not_piece_owner"
-        elif not owner_view_executable:
-            reason = "piece_not_commandable_now"
-        elif not executable:
-            reason = "no_actionable_targets"
-        else:
-            reason = None
-        actionable = {
-            "viewer_seat": viewer_seat,
-            "actionable_targets": actionable_targets,
-            "executable": executable,
-            "actionable_context": "viewer_context_provided",
-            "reason": reason,
-        }
+    if viewer_seat != piece.owner:
+        reason = "not_piece_owner"
+    elif not owner_view_executable:
+        reason = "piece_not_commandable_now"
+    elif not executable:
+        reason = "no_actionable_targets"
+    else:
+        reason = None
 
     return {
         "piece_id": piece_id,
         "owner": piece.owner,
         "player_id": player_id,
         "static": {"targets": static_targets},
-        "actionable": actionable,
+        "actionable": {
+            "viewer_seat": viewer_seat,
+            "actionable_targets": actionable_targets,
+            "executable": executable,
+            "actionable_context": "viewer_context_provided",
+            "reason": reason,
+        },
     }
 
 
 @router.get("/players")
-def players(match_id: str, container=Depends(get_container)):
+def players(match_id: str, player_id: str = Query(...), player_token: str = Query(...), container=Depends(get_container)):
     s = _get_state_or_404(container, match_id)
+    _require_viewer(s, player_id, player_token)
     out = {}
     for seat, info in s.players.items():
         out[str(seat)] = {
             "seat": seat,
-            "player_id": info.get("player_id"),
             "name": info.get("name"),
             "ready": bool(info.get("ready", False)),
             "online": bool(info.get("online", False)),

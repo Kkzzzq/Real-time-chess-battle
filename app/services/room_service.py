@@ -42,8 +42,8 @@ class RoomService:
                 raise ValueError("custom_unlock_windows must not contain duplicates")
             if len(normalized) == 0:
                 raise ValueError("custom_unlock_windows must not be empty")
-            if any(w < 0 or w >= 130 for w in normalized):
-                raise ValueError("custom_unlock_windows must be within [0, 129]")
+            if any(w < 50 or w >= 130 for w in normalized):
+                raise ValueError("custom_unlock_windows must be within [50, 129]")
             custom_unlock_windows = normalized
 
         now = int(time.time() * 1000)
@@ -95,6 +95,9 @@ class RoomService:
         now_ms = int(time.time() * 1000)
         for seat, info in state.players.items():
             if info.get("player_id") == player_id and info.get("player_token") == player_token:
+                exp = info.get("player_token_expires_at")
+                if exp is not None and now_ms > int(exp):
+                    raise ValueError("player token expired")
                 info["online"] = True
                 state.now_ms = now_ms
                 self.repo.save_match(state)
@@ -159,10 +162,21 @@ class RoomService:
                 return state
         raise ValueError("player not found")
 
-    def start_match(self, match_id: str) -> MatchState:
+    def start_match(self, match_id: str, requester_player_id: str) -> MatchState:
         state = self.repo.get_match(match_id)
         if not state:
             raise ValueError("match not found")
+        requester_seat = None
+        for seat, info in state.players.items():
+            if info.get("player_id") == requester_player_id:
+                requester_seat = seat
+                if not info.get("online", True):
+                    raise ValueError("player offline")
+                if not info.get("is_host", False):
+                    raise ValueError("only host can start")
+                break
+        if requester_seat is None:
+            raise ValueError("player not found")
         if state.status == MatchStatus.RUNNING:
             raise ValueError("match already running")
         if state.status == MatchStatus.ENDED:
