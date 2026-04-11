@@ -1,36 +1,69 @@
 from __future__ import annotations
 
-from app.domain.enums import PieceType
 from app.domain.events import EVENT_CAPTURE, GameEvent
 from app.domain.models import MatchState, Piece
-from app.engine.timeline import get_piece_display_position
+from app.engine.occupancy import get_piece_runtime_cells
+from app.engine.timeline import get_piece_segment_state, terminate_move
 
 
-def apply_capture(state: MatchState, winner: Piece, loser: Piece, now_ms: int) -> None:
+def _mark_dead(piece: Piece, now_ms: int, reason: str) -> None:
+    piece.alive = False
+    piece.captured_at = now_ms
+    piece.death_reason = reason
+    terminate_move(piece, now_ms)
+
+
+def apply_capture(state: MatchState, winner: Piece | None, loser: Piece, now_ms: int, reason: str = "capture") -> None:
     if not loser.alive:
         return
-    loser.alive = False
-    loser.is_moving = False
-    if loser.kind == PieceType.GENERAL:
-        loser.path_points = []
+    _mark_dead(loser, now_ms, reason)
     state.last_capture_at = now_ms
-    state.add_event(GameEvent(EVENT_CAPTURE, now_ms, {"by": winner.id, "target": loser.id}))
+    payload = {"target": loser.id, "reason": reason}
+    if winner is not None:
+        payload["by"] = winner.id
+    state.add_event(GameEvent(EVENT_CAPTURE, now_ms, payload))
 
 
-def detect_move_vs_static_contacts(state: MatchState, now_ms: int) -> list[tuple[Piece, Piece]]:
-    pairs = []
-    for m in [p for p in state.pieces.values() if p.alive and p.is_moving]:
-        mx, my = get_piece_display_position(m, now_ms)
-        cell = (round(mx), round(my))
-        for s in state.pieces.values():
-            if not s.alive or s.is_moving or s.owner == m.owner:
+def _moving_pieces(state: MatchState) -> list[Piece]:
+    return [p for p in state.pieces.values() if p.alive and p.is_moving]
+
+
+def _moving_vs_static_contacts(state: MatchState, now_ms: int) -> list[tuple[Piece, Piece]]:
+    pairs: list[tuple[Piece, Piece]] = []
+    for mover in _moving_pieces(state):
+        runtime_cells = get_piece_runtime_cells(mover, now_ms)
+        for static in state.pieces.values():
+            if not static.alive or static.is_moving or static.owner == mover.owner:
                 continue
-            if (s.x, s.y) == cell:
-                pairs.append((m, s))
+            if (static.x, static.y) in runtime_cells:
+                pairs.append((mover, static))
     return pairs
 
 
-def resolve_same_cell_contact(a: Piece, b: Piece) -> tuple[Piece | None, Piece | None]:
+def _is_head_on(a: Piece, b: Piece, now_ms: int) -> bool:
+    sa = get_piece_segment_state(a, now_ms)
+    sb = get_piece_segment_state(b, now_ms)
+    return sa["segment_start"] == sb["segment_end"] and sa["segment_end"] == sb["segment_start"]
+
+
+def _moving_vs_moving_contacts(state: MatchState, now_ms: int) -> list[tuple[Piece, Piece, str]]:
+    moving = _moving_pieces(state)
+    out: list[tuple[Piece, Piece, str]] = []
+    for i in range(len(moving)):
+        for j in range(i + 1, len(moving)):
+            a, b = moving[i], moving[j]
+            if a.owner == b.owner:
+                continue
+            a_cells = get_piece_runtime_cells(a, now_ms)
+            b_cells = get_piece_runtime_cells(b, now_ms)
+            if not a_cells.intersection(b_cells):
+                continue
+            reason = "head_on" if _is_head_on(a, b, now_ms) else "same_cell"
+            out.append((a, b, reason))
+    return out
+
+
+def _resolve_moving_duel(a: Piece, b: Piece) -> tuple[Piece | None, Piece | None]:
     if a.move_start_at is None or b.move_start_at is None:
         return None, None
     if a.move_start_at < b.move_start_at:
@@ -40,34 +73,17 @@ def resolve_same_cell_contact(a: Piece, b: Piece) -> tuple[Piece | None, Piece |
     return None, None
 
 
-def resolve_head_on_contact(a: Piece, b: Piece) -> tuple[Piece | None, Piece | None]:
-    return resolve_same_cell_contact(a, b)
-
-
-def detect_move_vs_move_contacts(state: MatchState, now_ms: int) -> list[tuple[Piece, Piece]]:
-    moving = [p for p in state.pieces.values() if p.alive and p.is_moving]
-    pairs: list[tuple[Piece, Piece]] = []
-    for i in range(len(moving)):
-        for j in range(i + 1, len(moving)):
-            a, b = moving[i], moving[j]
-            if a.owner == b.owner:
-                continue
-            ax, ay = get_piece_display_position(a, now_ms)
-            bx, by = get_piece_display_position(b, now_ms)
-            if round(ax) == round(bx) and round(ay) == round(by):
-                pairs.append((a, b))
-    return pairs
-
-
 def resolve_contacts(state: MatchState, now_ms: int) -> None:
-    for m, s in detect_move_vs_static_contacts(state, now_ms):
-        apply_capture(state, m, s, now_ms)
-    for a, b in detect_move_vs_move_contacts(state, now_ms):
-        winner, loser = resolve_same_cell_contact(a, b)
+    for mover, static in _moving_vs_static_contacts(state, now_ms):
+        if mover.alive and static.alive:
+            apply_capture(state, mover, static, now_ms, reason="move_vs_static")
+
+    for a, b, mode in _moving_vs_moving_contacts(state, now_ms):
+        if not a.alive or not b.alive:
+            continue
+        winner, loser = _resolve_moving_duel(a, b)
         if winner and loser:
-            apply_capture(state, winner, loser, now_ms)
+            apply_capture(state, winner, loser, now_ms, reason=f"move_vs_move_{mode}")
         else:
-            a.alive = False
-            b.alive = False
-            state.last_capture_at = now_ms
-            state.add_event(GameEvent(EVENT_CAPTURE, now_ms, {"mutual": [a.id, b.id]}))
+            apply_capture(state, None, a, now_ms, reason="mutual_destroy")
+            apply_capture(state, None, b, now_ms, reason="mutual_destroy")

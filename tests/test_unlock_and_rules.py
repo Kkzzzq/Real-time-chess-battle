@@ -5,6 +5,7 @@ from app.engine.board_setup import create_standard_board
 from app.engine.move_rules import validate_move
 from app.engine.phase import compute_phase
 from app.engine.unlock_service import UnlockService
+from app.services.command_service import CommandService
 from app.services.match_service import MatchService
 from app.services.room_service import RoomService
 from app.repository.memory_repo import MemoryRepo
@@ -33,7 +34,7 @@ def test_phase_schedule() -> None:
 
 def test_auto_unlock_prefers_cannon() -> None:
     _, state = make_running_state(0)
-    UnlockService.apply_auto_unlocks(state, 60_000)
+    UnlockService.apply_auto_unlocks(state, 71_000)
     assert PieceType.CANNON in state.unlocked_by_player[1]
     assert PieceType.CANNON in state.unlocked_by_player[2]
 
@@ -71,3 +72,19 @@ def test_match_tick_finishes_move() -> None:
     svc.tick_once(state.match_id, 31_000)
     assert soldier.is_moving is False
     assert (soldier.x, soldier.y) == (0, 5)
+
+
+def test_unlock_rejects_when_not_running() -> None:
+    repo, state = make_running_state(0)
+    state.status = MatchStatus.WAITING
+    ok, msg = CommandService(repo).handle_unlock_command(state.match_id, 1, PieceType.HORSE, 60_000)
+    assert ok is False
+    assert "running" in msg
+
+
+def test_resign_rejects_when_ended() -> None:
+    repo, state = make_running_state(0)
+    state.status = MatchStatus.ENDED
+    ok, msg = CommandService(repo).handle_resign_command(state.match_id, 1, 60_000)
+    assert ok is False
+    assert "ended" in msg
