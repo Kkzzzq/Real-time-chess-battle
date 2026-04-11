@@ -18,11 +18,11 @@ from app.engine.phase import compute_phase
 from app.engine.snapshot import build_match_snapshot
 from app.engine.timeline import advance_all_pieces, finish_move
 from app.engine.unlock_service import UnlockService
-from app.repository.memory_repo import MemoryRepo
+from app.repository.base import MatchRepo
 
 
 class MatchService:
-    def __init__(self, repo: MemoryRepo) -> None:
+    def __init__(self, repo: MatchRepo) -> None:
         self.repo = repo
 
     def tick_once(self, match_id: str, now_ms: int | None = None) -> dict | None:
@@ -49,7 +49,7 @@ class MatchService:
     def advance_match(self, state, now_ms: int) -> None:
         old_phase = state.phase_name
         old_wave = state.wave_index
-        name, deadline, wave = compute_phase(now_ms, state.started_at)
+        name, deadline, wave = compute_phase(now_ms, state.started_at, state)
         state.phase_name, state.phase_deadline_ms, state.wave_index = name, deadline, wave
         if old_phase != name:
             state.add_event(GameEvent(EVENT_PHASE_CHANGED, now_ms, {"from": old_phase, "to": name}))

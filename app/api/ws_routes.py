@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 import time
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 
+from app.api.auth import resolve_viewer_seat_with_auth
 from app.api.deps import get_ws_container
 from app.domain.enums import MatchStatus, PieceType
 from app.engine.snapshot import build_match_snapshot
@@ -22,9 +23,18 @@ async def ws_match(websocket: WebSocket, match_id: str, container=Depends(get_ws
         await websocket.close(code=1008)
         return
 
+    player_id = websocket.query_params.get("player_id")
+    player_token = websocket.query_params.get("player_token")
+
     await container.broadcaster.connect(match_id, websocket)
     now_ms = int(time.time() * 1000)
-    snap = build_match_snapshot(state, now_ms)
+    try:
+        viewer_seat = resolve_viewer_seat_with_auth(state, player_id, player_token)
+    except HTTPException as exc:
+        await websocket.send_json({"type": "error", "data": {"message": exc.detail}})
+        await websocket.close(code=1008)
+        return
+    snap = build_match_snapshot(state, now_ms, viewer_seat=viewer_seat)
     await websocket.send_json(
         {
             "type": "subscribed",
@@ -51,6 +61,14 @@ async def ws_match(websocket: WebSocket, match_id: str, container=Depends(get_ws
 
             if t == "ping":
                 await websocket.send_json({"type": "pong", "data": {"ts_ms": now}})
+                continue
+
+            if player_id is not None and data.get("player_id") != player_id:
+                await websocket.send_json({"type": "command_result", "data": {"ok": False, "message": "player mismatch"}})
+                continue
+
+            if player_id is not None and not player_token:
+                await websocket.send_json({"type": "command_result", "data": {"ok": False, "message": "player_token required"}})
                 continue
 
             before_state = container.repo.get_match(match_id)

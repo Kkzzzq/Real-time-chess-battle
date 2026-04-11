@@ -20,14 +20,17 @@ class JoinMatchRequest(BaseModel):
 
 class ReadyMatchRequest(BaseModel):
     player_id: str
+    player_token: str
 
 
 class LeaveMatchRequest(BaseModel):
     player_id: str
+    player_token: str
 
 
 class MoveCommandRequest(BaseModel):
     player_id: str
+    player_token: str
     piece_id: str
     target_x: int
     target_y: int
@@ -35,11 +38,13 @@ class MoveCommandRequest(BaseModel):
 
 class UnlockCommandRequest(BaseModel):
     player_id: str
+    player_token: str
     kind: PieceType
 
 
 class ResignRequest(BaseModel):
     player_id: str
+    player_token: str
 
 
 class MatchMetaSchema(BaseModel):
@@ -57,6 +62,7 @@ class MatchMetaSchema(BaseModel):
 class PlayerSchema(BaseModel):
     seat: int
     player_id: str
+    player_token: str | None = None
     name: str
     ready: bool
     online: bool
@@ -212,7 +218,7 @@ class LegalMovesResponse(BaseModel):
     owner: int
     player_id: str | None
     static: LegalMovesStaticSchema
-    actionable: LegalMovesActionableSchema
+    actionable: LegalMovesActionableSchema | None
 
 
 class CommandResultResponse(BaseModel):
@@ -224,6 +230,7 @@ class CommandResultResponse(BaseModel):
 class PlayerJoinResponse(BaseModel):
     seat: int
     player_id: str
+    player_token: str
     name: str
     ready: bool
     online: bool
@@ -231,6 +238,18 @@ class PlayerJoinResponse(BaseModel):
 
 
 class JoinMatchResponse(BaseModel):
+    player: PlayerJoinResponse
+    status: str
+
+
+
+
+class ReconnectMatchRequest(BaseModel):
+    player_id: str
+    player_token: str
+
+
+class ReconnectMatchResponse(BaseModel):
     player: PlayerJoinResponse
     status: str
 
