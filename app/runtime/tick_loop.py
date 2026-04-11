@@ -15,7 +15,7 @@ class TickLoop:
         self.broadcaster = broadcaster
         self._tasks: dict[str, asyncio.Task] = {}
 
-    def start_match_loop(self, match_id: str) -> None:
+    async def ensure_match_loop(self, match_id: str) -> None:
         if match_id in self._tasks and not self._tasks[match_id].done():
             return
         self._tasks[match_id] = asyncio.create_task(self.run_loop(match_id))
@@ -41,6 +41,10 @@ class TickLoop:
 
                 status = snapshot["match_meta"]["status"]
                 if status == MatchStatus.ENDED.value:
+                    await self.broadcaster.broadcast_event(
+                        match_id,
+                        {"type": "match_ended", "ts_ms": now_ms, "payload": {"match_id": match_id}},
+                    )
                     return
                 await asyncio.sleep(TICK_MS / 1000)
         finally:

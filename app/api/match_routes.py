@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import time
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.deps import get_container
 from app.api.schemas import JoinMatchRequest, LeaveMatchRequest, ReadyMatchRequest
+from app.engine.snapshot import build_match_snapshot
 
 router = APIRouter(prefix="/matches", tags=["matches"])
 
@@ -42,11 +45,18 @@ def ready_match(match_id: str, payload: ReadyMatchRequest, container=Depends(get
 
 
 @router.post("/{match_id}/start")
-def start_match(match_id: str, container=Depends(get_container)):
+async def start_match(match_id: str, container=Depends(get_container)):
     try:
         state = container.room_service.start_match(match_id)
-        container.tick_loop.start_match_loop(match_id)
-        return {"ok": True, "status": state.status.value, "started_at": state.started_at}
+        await container.tick_loop.ensure_match_loop(match_id)
+        now_ms = int(time.time() * 1000)
+        container.match_service.tick_once(match_id, now_ms)
+        return {
+            "ok": True,
+            "status": state.status.value,
+            "started_at": state.started_at,
+            "snapshot": build_match_snapshot(state, now_ms),
+        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

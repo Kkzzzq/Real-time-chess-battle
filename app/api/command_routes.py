@@ -18,9 +18,14 @@ def _snapshot_or_404(container, match_id: str, now_ms: int) -> dict:
     return build_match_snapshot(state, now_ms)
 
 
+def _reconcile(container, match_id: str, now_ms: int) -> None:
+    container.match_service.tick_once(match_id, now_ms)
+
+
 @router.post("/move")
 def move(match_id: str, payload: MoveCommandRequest, container=Depends(get_container)):
     now_ms = int(time.time() * 1000)
+    _reconcile(container, match_id, now_ms)
     ok, msg = container.command_service.handle_move_command(
         match_id,
         payload.player,
@@ -28,18 +33,23 @@ def move(match_id: str, payload: MoveCommandRequest, container=Depends(get_conta
         (payload.target_x, payload.target_y),
         now_ms,
     )
+    _reconcile(container, match_id, now_ms)
     return {"ok": ok, "message": msg, "snapshot": _snapshot_or_404(container, match_id, now_ms)}
 
 
 @router.post("/unlock")
 def unlock(match_id: str, payload: UnlockCommandRequest, container=Depends(get_container)):
     now_ms = int(time.time() * 1000)
+    _reconcile(container, match_id, now_ms)
     ok, msg = container.command_service.handle_unlock_command(match_id, payload.player, payload.kind, now_ms)
+    _reconcile(container, match_id, now_ms)
     return {"ok": ok, "message": msg, "snapshot": _snapshot_or_404(container, match_id, now_ms)}
 
 
 @router.post("/resign")
 def resign(match_id: str, payload: ResignRequest, container=Depends(get_container)):
     now_ms = int(time.time() * 1000)
+    _reconcile(container, match_id, now_ms)
     ok, msg = container.command_service.handle_resign_command(match_id, payload.player, now_ms)
+    _reconcile(container, match_id, now_ms)
     return {"ok": ok, "message": msg, "snapshot": _snapshot_or_404(container, match_id, now_ms)}

@@ -6,7 +6,7 @@ import time
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
 from app.api.deps import get_container
-from app.domain.enums import PieceType
+from app.domain.enums import MatchStatus, PieceType
 from app.engine.snapshot import build_match_snapshot
 
 router = APIRouter(tags=["ws"])
@@ -24,6 +24,8 @@ async def ws_match(websocket: WebSocket, match_id: str, container=Depends(get_co
 
     await container.broadcaster.connect(match_id, websocket)
     now_ms = int(time.time() * 1000)
+    container.match_service.tick_once(match_id, now_ms)
+    state = container.repo.get_match(match_id)
     snap = build_match_snapshot(state, now_ms)
     await websocket.send_json(
         {
@@ -44,9 +46,12 @@ async def ws_match(websocket: WebSocket, match_id: str, container=Depends(get_co
             data = json.loads(raw)
             t = data.get("type")
             now = int(time.time() * 1000)
+
             if t == "ping":
                 await websocket.send_json({"type": "pong", "data": {"ts_ms": now}})
                 continue
+
+            container.match_service.tick_once(match_id, now)
             if t == "move":
                 ok, msg = container.command_service.handle_move_command(
                     match_id,
@@ -67,9 +72,13 @@ async def ws_match(websocket: WebSocket, match_id: str, container=Depends(get_co
             else:
                 ok, msg = False, "unsupported"
 
-            await websocket.send_json({"type": "command_result", "data": {"ok": ok, "message": msg}})
+            container.match_service.tick_once(match_id, now)
             latest = container.repo.get_match(match_id)
+            await websocket.send_json({"type": "command_result", "data": {"ok": ok, "message": msg}})
             if latest is not None:
-                await websocket.send_json({"type": "snapshot", "data": build_match_snapshot(latest, now)})
+                snap = build_match_snapshot(latest, now)
+                await websocket.send_json({"type": "snapshot", "data": snap})
+                if snap["match_meta"]["status"] == MatchStatus.ENDED.value:
+                    await websocket.send_json({"type": "event", "data": {"type": "match_ended", "ts_ms": now, "payload": {"match_id": match_id}}})
     except WebSocketDisconnect:
         await container.broadcaster.disconnect(match_id, websocket)

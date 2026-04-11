@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from app.core.constants import FULL_UNLOCK_AT
 from app.core.ruleset import AUTO_UNLOCK_PRIORITY
-from app.domain.enums import PieceType
+from app.domain.enums import MatchStatus, PieceType
 from app.domain.events import EVENT_UNLOCK_AUTO_APPLIED, EVENT_UNLOCK_CHOSEN, GameEvent
 from app.domain.models import MatchState
 from app.engine.phase import (
@@ -34,6 +34,8 @@ class UnlockService:
 
     @staticmethod
     def choose_unlock(player: int, kind: PieceType, state: MatchState, now_ms: int) -> tuple[bool, str]:
+        if state.status != MatchStatus.RUNNING:
+            return False, "match not running"
         idx = get_current_wave_index(now_ms, state.started_at)
         if idx < 0:
             return False, "unlock window not open"

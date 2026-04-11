@@ -7,14 +7,17 @@
     body { font-family: Arial, sans-serif; margin: 16px; }
     .row { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
     .card { border: 1px solid #ccc; padding: 10px; min-width: 320px; }
-    input, button, select, textarea { margin: 4px 0; }
-    table { border-collapse: collapse; }
-    td { border: 1px solid #aaa; width: 60px; height: 40px; text-align: center; font-size: 12px; }
+    td { border: 1px solid #aaa; width: 62px; height: 42px; text-align: center; font-size: 12px; cursor: pointer; }
+    td.cell-target { background: #e8f6ff; }
+    td.cell-piece { background: #f5f5f5; }
     pre { background:#f6f6f6; padding:8px; max-height:220px; overflow:auto; }
+    .ok { color: #1f7a1f; }
+    .err { color: #b80000; }
   </style>
 </head>
 <body>
   <h1>实时象棋联调面板</h1>
+  <div id="status"></div>
 
   <div class="row">
     <div class="card">
@@ -35,6 +38,7 @@
       <button onclick="fetchState()">拉取状态</button>
       <button onclick="fetchUnlockState()">拉取解锁</button>
       <div>WS 状态: <span id="wsStatus">disconnected</span></div>
+      <div>阶段倒计时: <span id="phaseRemain">-</span></div>
       <div>最新消息:</div>
       <pre id="lastMsg"></pre>
     </div>
@@ -57,114 +61,75 @@
   </div>
 
   <div class="row">
-    <div class="card">
-      <h3>对局信息</h3>
-      <pre id="meta"></pre>
-    </div>
-    <div class="card">
-      <h3>最近事件</h3>
-      <pre id="events"></pre>
-    </div>
+    <div class="card"><h3>对局信息</h3><pre id="meta"></pre></div>
+    <div class="card"><h3>解锁面板</h3><pre id="unlock"></pre></div>
+    <div class="card"><h3>最近事件</h3><pre id="events"></pre></div>
   </div>
 
-  <div class="card">
-    <h3>棋盘(9x10)</h3>
-    <table id="board"></table>
+  <div class="row">
+    <div class="card"><h3>棋盘(点棋子自动填 piece_id，点空格自动填 target)</h3><table id="board"></table></div>
+    <div class="card"><h3>WS 历史</h3><pre id="wsHistory"></pre></div>
   </div>
 
 <script>
 let ws = null;
 let snapshot = null;
+const wsHistory = [];
 
 function base() { return location.origin; }
 function mId() { return document.getElementById('matchId').value.trim(); }
 function setMsg(v){ document.getElementById('lastMsg').textContent = JSON.stringify(v, null, 2); }
+function pushWs(msg){ wsHistory.push(msg); if(wsHistory.length>40) wsHistory.shift(); document.getElementById('wsHistory').textContent = JSON.stringify(wsHistory, null, 2); }
+function setStatus(ok, msg){ const el=document.getElementById('status'); el.className = ok?'ok':'err'; el.textContent = msg; }
 
-async function createMatch(){
-  const r = await fetch(base() + '/matches', {method:'POST'});
-  const j = await r.json();
-  document.getElementById('matchId').value = j.match_id;
-  setMsg(j);
-}
-async function joinMatch(){
-  const r = await fetch(base()+`/matches/${mId()}/join`, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({player_name: document.getElementById('playerName').value})});
-  const j = await r.json();
-  if (j.player?.id) document.getElementById('playerId').value = j.player.id;
-  setMsg(j);
-}
-async function readyMatch(){
-  const r = await fetch(base()+`/matches/${mId()}/ready`, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({player_id: document.getElementById('playerId').value})});
-  setMsg(await r.json());
-}
-async function startMatch(){
-  const r = await fetch(base()+`/matches/${mId()}/start`, {method:'POST'});
-  setMsg(await r.json());
-}
-async function leaveMatch(){
-  const r = await fetch(base()+`/matches/${mId()}/leave`, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({player_id: document.getElementById('playerId').value})});
-  setMsg(await r.json());
-}
+async function createMatch(){ const j = await (await fetch(base() + '/matches', {method:'POST'})).json(); document.getElementById('matchId').value = j.match_id; setMsg(j); }
+async function joinMatch(){ const j = await (await fetch(base()+`/matches/${mId()}/join`, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({player_name: document.getElementById('playerName').value})})).json(); if (j.player?.id) document.getElementById('playerId').value = j.player.id; setMsg(j); }
+async function readyMatch(){ setMsg(await (await fetch(base()+`/matches/${mId()}/ready`, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({player_id: document.getElementById('playerId').value})})).json()); }
+async function startMatch(){ const j = await (await fetch(base()+`/matches/${mId()}/start`, {method:'POST'})).json(); setMsg(j); if(j.snapshot) applySnapshot(j.snapshot); }
+async function leaveMatch(){ setMsg(await (await fetch(base()+`/matches/${mId()}/leave`, {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({player_id: document.getElementById('playerId').value})})).json()); }
 
 function connectWs(){
-  const url = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/matches/${mId()}/ws`;
-  ws = new WebSocket(url);
+  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/matches/${mId()}/ws`);
   ws.onopen = () => document.getElementById('wsStatus').textContent = 'connected';
   ws.onclose = () => document.getElementById('wsStatus').textContent = 'closed';
   ws.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    setMsg(data);
-    if (data.type === 'snapshot') { applySnapshot(data.data); }
-  }
+    const data = JSON.parse(e.data); pushWs(data); setMsg(data);
+    if (data.type === 'snapshot') applySnapshot(data.data);
+    if (data.type === 'command_result') setStatus(data.data.ok, data.data.message);
+  };
 }
 
-async function fetchState(){
-  const r = await fetch(base()+`/matches/${mId()}/state`);
-  applySnapshot(await r.json());
-}
-async function fetchUnlockState(){
-  const r = await fetch(base()+`/matches/${mId()}/unlock-state`);
-  setMsg(await r.json());
-}
-
-async function legalMoves(){
-  const piece = document.getElementById('pieceId').value;
-  const player = document.getElementById('cmdPlayer').value;
-  const r = await fetch(base()+`/matches/${mId()}/pieces/${piece}/legal-moves?player=${player}`);
-  setMsg(await r.json());
-}
+async function fetchState(){ applySnapshot(await (await fetch(base()+`/matches/${mId()}/state`)).json()); }
+async function fetchUnlockState(){ document.getElementById('unlock').textContent = JSON.stringify(await (await fetch(base()+`/matches/${mId()}/unlock-state`)).json(), null, 2); }
+async function legalMoves(){ const piece = document.getElementById('pieceId').value; const player = document.getElementById('cmdPlayer').value; setMsg(await (await fetch(base()+`/matches/${mId()}/pieces/${piece}/legal-moves?player=${player}`)).json()); }
 
 async function postCmd(path, body){
-  const r = await fetch(base()+`/matches/${mId()}/commands/${path}`, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)});
-  const j = await r.json();
-  setMsg(j);
-  if (j.snapshot) applySnapshot(j.snapshot);
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify({type:'ping'}));
+  const j = await (await fetch(base()+`/matches/${mId()}/commands/${path}`, {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)})).json();
+  setMsg(j); setStatus(j.ok, j.message); if (j.snapshot) applySnapshot(j.snapshot);
 }
 
-function moveCmd(){ postCmd('move', {player:Number(document.getElementById('cmdPlayer').value), piece_id: document.getElementById('pieceId').value, target_x:Number(document.getElementById('targetX').value), target_y:Number(document.getElementById('targetY').value)}); }
-function unlockCmd(){ postCmd('unlock', {player:Number(document.getElementById('cmdPlayer').value), kind:document.getElementById('unlockKind').value}); }
-function resignCmd(){ postCmd('resign', {player:Number(document.getElementById('cmdPlayer').value)}); }
+function moveCmd(){ postCmd('move', {player:Number(cmdPlayer.value), piece_id: pieceId.value, target_x:Number(targetX.value), target_y:Number(targetY.value)}); }
+function unlockCmd(){ postCmd('unlock', {player:Number(cmdPlayer.value), kind:unlockKind.value}); }
+function resignCmd(){ postCmd('resign', {player:Number(cmdPlayer.value)}); }
 
 function applySnapshot(s){
   snapshot = s;
-  document.getElementById('meta').textContent = JSON.stringify({match_meta:s.match_meta, players:s.players, phase:s.phase, unlock:s.unlock, board:s.board}, null, 2);
-  document.getElementById('events').textContent = JSON.stringify(s.events, null, 2);
-  renderBoard(s.pieces || []);
+  meta.textContent = JSON.stringify({match_meta:s.match_meta, players:s.players, phase:s.phase, board_stats:s.board.stats}, null, 2);
+  unlock.textContent = JSON.stringify(s.unlock, null, 2);
+  events.textContent = JSON.stringify(s.events, null, 2);
+  phaseRemain.textContent = s.phase.remaining_ms == null ? '-' : `${Math.ceil(s.phase.remaining_ms/1000)}s`;
+  renderBoard(s.board.cells || []);
 }
 
-function renderBoard(pieces){
-  const board = Array.from({length:10},()=>Array.from({length:9},()=>''));
-  for(const p of pieces){
-    if(!p.alive) continue;
-    board[p.y][p.x] = `${p.owner}-${p.kind.slice(0,3)}${p.is_moving?'*':''}`;
-  }
-  const tb = document.getElementById('board');
-  tb.innerHTML='';
+function renderBoard(cells){
+  const tb = document.getElementById('board'); tb.innerHTML='';
   for(let y=0;y<10;y++){
     const tr=document.createElement('tr');
     for(let x=0;x<9;x++){
       const td=document.createElement('td');
-      td.textContent = board[y][x];
+      const c=(cells[y]||[])[x];
+      if(c){ td.textContent=`${c.owner}-${c.kind.slice(0,3)}${c.moving?'*':''}`; td.className='cell-piece'; }
+      td.onclick=()=>{ if(c){ pieceId.value = c.piece_id; } else { targetX.value = x; targetY.value = y; td.className='cell-target'; } };
       tr.appendChild(td);
     }
     tb.appendChild(tr);

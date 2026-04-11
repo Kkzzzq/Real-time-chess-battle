@@ -13,6 +13,10 @@ class GameEvent:
 
 EVENT_MATCH_CREATED = "match_created"
 EVENT_PLAYER_JOINED = "player_joined"
+EVENT_PLAYER_READY = "player_ready"
+EVENT_PLAYER_LEFT = "player_left"
+EVENT_PLAYER_OFFLINE = "player_offline"
+EVENT_HOST_CHANGED = "host_changed"
 EVENT_MATCH_STARTED = "match_started"
 EVENT_PHASE_CHANGED = "phase_changed"
 EVENT_UNLOCK_WINDOW_OPENED = "unlock_window_opened"

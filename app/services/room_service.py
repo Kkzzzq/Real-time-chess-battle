@@ -4,7 +4,16 @@ import time
 import uuid
 
 from app.domain.enums import MatchStatus, PieceType
-from app.domain.events import EVENT_MATCH_CREATED, EVENT_MATCH_STARTED, EVENT_PLAYER_JOINED, GameEvent
+from app.domain.events import (
+    EVENT_HOST_CHANGED,
+    EVENT_MATCH_CREATED,
+    EVENT_MATCH_STARTED,
+    EVENT_PLAYER_JOINED,
+    EVENT_PLAYER_LEFT,
+    EVENT_PLAYER_OFFLINE,
+    EVENT_PLAYER_READY,
+    GameEvent,
+)
 from app.domain.models import MatchState
 from app.engine.board_setup import create_standard_board
 from app.repository.memory_repo import MemoryRepo
@@ -48,17 +57,34 @@ class RoomService:
         self.repo.save_match(state)
         return {"seat": seat, **player}
 
+    def _reassign_host_if_needed(self, state: MatchState, now_ms: int) -> None:
+        hosts = [s for s, info in state.players.items() if info.get("is_host")]
+        if hosts:
+            return
+        if not state.players:
+            return
+        new_host = sorted(state.players.keys())[0]
+        state.players[new_host]["is_host"] = True
+        state.add_event(GameEvent(EVENT_HOST_CHANGED, now_ms, {"seat": new_host}))
+
     def leave_match(self, match_id: str, player_id: str) -> MatchState:
         state = self.repo.get_match(match_id)
         if not state:
             raise ValueError("match not found")
+        now_ms = int(time.time() * 1000)
+
         for seat, info in list(state.players.items()):
             if info.get("id") != player_id:
                 continue
             if state.status == MatchStatus.WAITING:
+                was_host = bool(info.get("is_host"))
                 del state.players[seat]
+                state.add_event(GameEvent(EVENT_PLAYER_LEFT, now_ms, {"seat": seat, "player_id": player_id}))
+                if was_host:
+                    self._reassign_host_if_needed(state, now_ms)
             else:
                 info["online"] = False
+                state.add_event(GameEvent(EVENT_PLAYER_OFFLINE, now_ms, {"seat": seat, "player_id": player_id}))
             if not state.players:
                 self.repo.delete_match(match_id)
                 return state
@@ -70,11 +96,13 @@ class RoomService:
         state = self.repo.get_match(match_id)
         if not state:
             raise ValueError("match not found")
-        for info in state.players.values():
+        now_ms = int(time.time() * 1000)
+        for seat, info in state.players.items():
             if info.get("id") == player_id:
                 if info.get("ready"):
                     raise ValueError("already ready")
                 info["ready"] = True
+                state.add_event(GameEvent(EVENT_PLAYER_READY, now_ms, {"seat": seat, "player_id": player_id}))
                 self.repo.save_match(state)
                 return state
         raise ValueError("player not found")

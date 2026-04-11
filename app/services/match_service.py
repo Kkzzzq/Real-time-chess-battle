@@ -41,6 +41,7 @@ class MatchService:
         if state.status == MatchStatus.RUNNING:
             self.advance_match(state, now_ms)
 
+        self.repo.save_match(state)
         snapshot = build_match_snapshot(state, now_ms)
         events = [{"type": e.event_type, "ts_ms": e.ts_ms, "payload": e.payload} for e in state.event_log[before_events:]]
         return {"snapshot": snapshot, "events": events}

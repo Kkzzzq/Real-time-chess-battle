@@ -58,6 +58,8 @@ class CommandService:
         state = self.repo.get_match(match_id)
         if state is None:
             return False, "match not found"
+        if state.status != MatchStatus.RUNNING:
+            return False, "match not running"
         ok, msg = UnlockService.choose_unlock(player, kind, state, now_ms)
         if ok:
             self._append_command(state, {"type": "unlock", "player": player, "kind": kind.value, "ts": now_ms})
@@ -68,6 +70,8 @@ class CommandService:
         state = self.repo.get_match(match_id)
         if state is None:
             return False, "match not found"
+        if state.status != MatchStatus.RUNNING:
+            return False, "match already ended" if state.status == MatchStatus.ENDED else "match not running"
         apply_resign(player, state, now_ms)
         self._append_command(state, {"type": "resign", "player": player, "ts": now_ms})
         self.repo.save_match(state)
