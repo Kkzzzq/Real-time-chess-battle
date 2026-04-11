@@ -26,6 +26,8 @@ def check_general_dead(state: MatchState, now_ms: int) -> None:
 
 
 def check_draw_conditions(state: MatchState, now_ms: int) -> None:
+    if not state.allow_draw:
+        return
     if state.started_at is None or state.status == MatchStatus.ENDED:
         return
     elapsed = (now_ms - state.started_at) / 1000

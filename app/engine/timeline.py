@@ -30,6 +30,10 @@ def get_piece_segment_state(piece: Piece, now_ms: int) -> dict:
             "local_progress": 1.0,
             "left_start_cell": True,
             "entered_target_cell": True,
+            "leaving_cell": (piece.x, piece.y),
+            "entering_cell": (piece.x, piece.y),
+            "current_edge": ((piece.x, piece.y), (piece.x, piece.y)),
+            "edge_progress": 1.0,
         }
 
     points = get_path_with_start(piece)
@@ -44,6 +48,10 @@ def get_piece_segment_state(piece: Piece, now_ms: int) -> dict:
             "local_progress": 1.0,
             "left_start_cell": True,
             "entered_target_cell": True,
+            "leaving_cell": points[0],
+            "entering_cell": points[0],
+            "current_edge": (points[0], points[0]),
+            "edge_progress": 1.0,
         }
 
     if now_ms >= piece.move_end_at:
@@ -65,6 +73,10 @@ def get_piece_segment_state(piece: Piece, now_ms: int) -> dict:
         "local_progress": local,
         "left_start_cell": idx > 0 or local > 0.0,
         "entered_target_cell": idx == seg_count - 1 and local >= 1.0,
+        "leaving_cell": seg_start if local < 1.0 else None,
+        "entering_cell": seg_end if local > 0.0 else None,
+        "current_edge": (seg_start, seg_end),
+        "edge_progress": local,
     }
 
 

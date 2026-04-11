@@ -55,6 +55,10 @@ class MatchState:
     last_action_at: int | None = None
     last_capture_at: int | None = None
     version: int = 0
+    ruleset_name: str = "standard"
+    allow_draw: bool = True
+    tick_ms: int = 100
+    custom_unlock_windows: list[int] | None = None
 
     def add_event(self, event: GameEvent) -> None:
         self.event_log.append(event)

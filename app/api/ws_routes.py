@@ -24,8 +24,6 @@ async def ws_match(websocket: WebSocket, match_id: str, container=Depends(get_ws
 
     await container.broadcaster.connect(match_id, websocket)
     now_ms = int(time.time() * 1000)
-    container.match_service.tick_once(match_id, now_ms)
-    state = container.repo.get_match(match_id)
     snap = build_match_snapshot(state, now_ms)
     await websocket.send_json(
         {
@@ -38,6 +36,7 @@ async def ws_match(websocket: WebSocket, match_id: str, container=Depends(get_ws
                 "started_at": snap["match_meta"]["started_at"],
                 "winner": snap["match_meta"]["winner"],
                 "reason": snap["match_meta"]["reason"],
+                "version_semantics": "event_version",
             },
         }
     )
@@ -54,7 +53,6 @@ async def ws_match(websocket: WebSocket, match_id: str, container=Depends(get_ws
                 await websocket.send_json({"type": "pong", "data": {"ts_ms": now}})
                 continue
 
-            container.match_service.tick_once(match_id, now)
             before_state = container.repo.get_match(match_id)
             before_events = len(before_state.event_log) if before_state else 0
             if t == "move":
@@ -77,20 +75,20 @@ async def ws_match(websocket: WebSocket, match_id: str, container=Depends(get_ws
             else:
                 ok, msg = False, "unsupported"
 
-            container.match_service.tick_once(match_id, now)
             latest = container.repo.get_match(match_id)
+            delta_events = latest.event_log[before_events:] if latest is not None else []
             await websocket.send_json({"type": "command_result", "data": {"ok": ok, "message": msg}})
-            if latest is not None:
-                delta_events = latest.event_log[before_events:]
-                await websocket.send_json(
-                    {
-                        "type": "events",
-                        "data": [{"type": e.event_type, "ts_ms": e.ts_ms, "payload": e.payload} for e in delta_events],
-                    }
-                )
-                snap = build_match_snapshot(latest, now)
-                await websocket.send_json({"type": "snapshot", "data": snap})
-                if snap["match_meta"]["status"] == MatchStatus.ENDED.value:
-                    await websocket.send_json({"type": "event", "data": {"type": "match_ended", "ts_ms": now, "payload": {"match_id": match_id}}})
+            await websocket.send_json(
+                {
+                    "type": "events",
+                    "data": {
+                        "events": [{"type": e.event_type, "ts_ms": e.ts_ms, "payload": e.payload} for e in delta_events],
+                        "note": "snapshot is broadcast by tick loop; clients should treat command events and broadcast frames as eventually consistent.",
+                    },
+                }
+            )
+
+            if latest is not None and latest.status == MatchStatus.ENDED:
+                await websocket.send_json({"type": "event", "data": {"type": "match_ended", "ts_ms": now, "payload": {"match_id": match_id}}})
     except WebSocketDisconnect:
         await container.broadcaster.disconnect(match_id, websocket)

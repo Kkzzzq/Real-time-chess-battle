@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.deps import get_container
 from app.api.schemas import (
+    CreateMatchRequest,
     JoinMatchRequest,
     JoinMatchResponse,
     LeaveMatchRequest,
@@ -19,16 +20,45 @@ from app.engine.snapshot import build_match_snapshot
 router = APIRouter(prefix="/matches", tags=["matches"])
 
 
+def _public_players(state) -> dict[str, dict]:
+    players = {}
+    for seat, info in state.players.items():
+        players[str(seat)] = {
+            "seat": seat,
+            "player_id": info.get("player_id"),
+            "name": info.get("name"),
+            "ready": bool(info.get("ready", False)),
+            "online": bool(info.get("online", False)),
+            "is_host": bool(info.get("is_host", False)),
+        }
+    return players
+
+
 @router.post("", response_model=MatchCreatedResponse)
-def create_match(container=Depends(get_container)):
-    state = container.room_service.create_match()
-    return {"match_id": state.match_id, "status": state.status.value}
+def create_match(payload: CreateMatchRequest | None = None, container=Depends(get_container)):
+    payload = payload or CreateMatchRequest()
+    state = container.room_service.create_match(
+        ruleset_name=payload.ruleset_name,
+        allow_draw=payload.allow_draw,
+        tick_ms=payload.tick_ms,
+        custom_unlock_windows=payload.custom_unlock_windows,
+    )
+    return {
+        "match_id": state.match_id,
+        "status": state.status.value,
+        "ruleset": {
+            "ruleset_name": state.ruleset_name,
+            "allow_draw": state.allow_draw,
+            "tick_ms": state.tick_ms,
+            "custom_unlock_windows": state.custom_unlock_windows,
+        },
+    }
 
 
 @router.get("")
 def list_matches(container=Depends(get_container)):
     return [
-        {"match_id": s.match_id, "status": s.status.value, "players": s.players}
+        {"match_id": s.match_id, "status": s.status.value, "players": _public_players(s)}
         for s in container.repo.list_matches()
     ]
 
@@ -47,7 +77,7 @@ def join_match(match_id: str, payload: JoinMatchRequest, container=Depends(get_c
 def ready_match(match_id: str, payload: ReadyMatchRequest, container=Depends(get_container)):
     try:
         state = container.room_service.ready_match(match_id, payload.player_id)
-        return {"ok": True, "status": state.status.value, "players": state.players}
+        return {"ok": True, "status": state.status.value, "players": _public_players(state)}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -76,6 +106,6 @@ def leave_match(match_id: str, payload: LeaveMatchRequest, container=Depends(get
         if container.repo.get_match(match_id) is None:
             container.tick_loop.stop_match_loop(match_id)
             return {"ok": True, "status": "deleted"}
-        return {"ok": True, "status": state.status.value, "players": state.players}
+        return {"ok": True, "status": state.status.value, "players": _public_players(state)}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

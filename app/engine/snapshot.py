@@ -33,12 +33,22 @@ def _piece_disabled_reason(state: MatchState, piece: Piece, now_ms: int) -> str 
     return None
 
 
-def build_piece_snapshot(state: MatchState, piece: Piece, now_ms: int) -> dict:
+def _viewer_commandability(state: MatchState, piece: Piece, now_ms: int, viewer_seat: int | None) -> tuple[bool | None, str | None]:
+    if viewer_seat is None:
+        return None, None
+    if viewer_seat != piece.owner:
+        return False, "not_piece_owner"
+    disabled_reason = _piece_disabled_reason(state, piece, now_ms)
+    return disabled_reason is None, disabled_reason
+
+
+def build_piece_snapshot(state: MatchState, piece: Piece, now_ms: int, viewer_seat: int | None = None) -> dict:
     px, py = get_piece_display_position(piece, now_ms)
     remain_move = max(0, (piece.move_end_at or 0) - now_ms) if piece.is_moving else 0
     remain_cd = max(0, piece.cooldown_end_at - now_ms)
     seg = get_piece_segment_state(piece, now_ms)
     disabled_reason = _piece_disabled_reason(state, piece, now_ms)
+    viewer_can_command, viewer_disabled_reason = _viewer_commandability(state, piece, now_ms, viewer_seat)
     runtime_cells = sorted(list(get_piece_runtime_cells(piece, now_ms)))
     return {
         "id": piece.id,
@@ -63,7 +73,9 @@ def build_piece_snapshot(state: MatchState, piece: Piece, now_ms: int) -> dict:
         "commandability": {
             "owner_can_command": disabled_reason is None,
             "owner_disabled_reason": disabled_reason,
-            "note": "can_command is evaluated from piece owner's view; viewer permission must still check player identity.",
+            "viewer_can_command": viewer_can_command,
+            "viewer_disabled_reason": viewer_disabled_reason,
+            "note": "can_command is owner_view; use commandability.viewer_* when a viewer/player_id is provided.",
         },
         "runtime_cells": runtime_cells,
         "segment": {
@@ -164,18 +176,32 @@ def build_recent_events(state: MatchState) -> list[dict]:
     return [{"type": e.event_type, "ts_ms": e.ts_ms, "payload": e.payload} for e in state.event_log[-20:]]
 
 
+def _empty_cell() -> dict:
+    return {"occupants": [], "primary_occupant": None}
+
+
 def build_board_snapshot(state: MatchState, now_ms: int, runtime: bool = False) -> dict:
-    cells = [[None for _ in range(BOARD_COLS)] for _ in range(BOARD_ROWS)]
+    cells = [[_empty_cell() for _ in range(BOARD_COLS)] for _ in range(BOARD_ROWS)]
     living = [p for p in state.pieces.values() if p.alive]
     for piece in living:
         target_cells = get_piece_runtime_cells(piece, now_ms) if runtime else {(piece.x, piece.y)}
+        occ = {
+            "piece_id": piece.id,
+            "owner": piece.owner,
+            "kind": piece.kind.value,
+            "moving": piece.is_moving,
+        }
         for cell_x, cell_y in target_cells:
-            cells[cell_y][cell_x] = {
-                "piece_id": piece.id,
-                "owner": piece.owner,
-                "kind": piece.kind.value,
-                "moving": piece.is_moving,
-            }
+            cell = cells[cell_y][cell_x]
+            cell["occupants"].append(occ)
+
+    for row in cells:
+        for cell in row:
+            if cell["occupants"]:
+                sorted_occ = sorted(cell["occupants"], key=lambda o: (not o["moving"], o["piece_id"]))
+                cell["occupants"] = sorted_occ
+                cell["primary_occupant"] = sorted_occ[0]
+
     return {
         "cells": cells,
         "mode": "runtime" if runtime else "logical",
@@ -189,7 +215,21 @@ def build_board_snapshot(state: MatchState, now_ms: int, runtime: bool = False) 
     }
 
 
-def build_match_snapshot(state: MatchState, now_ms: int) -> dict:
+def _snapshot_players(state: MatchState) -> dict[str, dict]:
+    players: dict[str, dict] = {}
+    for seat, info in state.players.items():
+        players[str(seat)] = {
+            "seat": seat,
+            "player_id": info.get("player_id"),
+            "name": info.get("name"),
+            "ready": bool(info.get("ready", False)),
+            "online": bool(info.get("online", False)),
+            "is_host": bool(info.get("is_host", False)),
+        }
+    return players
+
+
+def build_match_snapshot(state: MatchState, now_ms: int, viewer_seat: int | None = None) -> dict:
     return {
         "match_meta": {
             "match_id": state.match_id,
@@ -200,13 +240,19 @@ def build_match_snapshot(state: MatchState, now_ms: int) -> dict:
             "started_at": state.started_at,
             "now_ms": now_ms,
             "version": state.version,
+            "ruleset": {
+                "ruleset_name": state.ruleset_name,
+                "allow_draw": state.allow_draw,
+                "tick_ms": state.tick_ms,
+                "custom_unlock_windows": state.custom_unlock_windows,
+            },
         },
-        "players": state.players,
+        "players": _snapshot_players(state),
         "phase": build_phase_snapshot(state, now_ms),
         "unlock": build_unlock_snapshot(state, now_ms),
         "board": build_board_snapshot(state, now_ms, runtime=False),
         "runtime_board": build_board_snapshot(state, now_ms, runtime=True),
-        "pieces": [build_piece_snapshot(state, p, now_ms) for p in state.pieces.values()],
+        "pieces": [build_piece_snapshot(state, p, now_ms, viewer_seat=viewer_seat) for p in state.pieces.values()],
         "events": build_recent_events(state),
         "command_log": state.command_log[-50:],
     }

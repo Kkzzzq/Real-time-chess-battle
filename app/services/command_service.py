@@ -20,7 +20,7 @@ class CommandService:
 
     def _resolve_player_seat(self, state, player_id: str) -> tuple[int | None, str | None]:
         for seat, info in state.players.items():
-            if info.get("id") == player_id:
+            if info.get("player_id") == player_id or info.get("id") == player_id:
                 if not info.get("online", True):
                     return None, "player offline"
                 return seat, None
