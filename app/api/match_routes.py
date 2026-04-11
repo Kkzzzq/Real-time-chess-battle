@@ -5,13 +5,21 @@ import time
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.deps import get_container
-from app.api.schemas import JoinMatchRequest, LeaveMatchRequest, ReadyMatchRequest
+from app.api.schemas import (
+    JoinMatchRequest,
+    JoinMatchResponse,
+    LeaveMatchRequest,
+    MatchCreatedResponse,
+    MatchStatusResponse,
+    ReadyMatchRequest,
+    StartMatchResponse,
+)
 from app.engine.snapshot import build_match_snapshot
 
 router = APIRouter(prefix="/matches", tags=["matches"])
 
 
-@router.post("")
+@router.post("", response_model=MatchCreatedResponse)
 def create_match(container=Depends(get_container)):
     state = container.room_service.create_match()
     return {"match_id": state.match_id, "status": state.status.value}
@@ -25,7 +33,7 @@ def list_matches(container=Depends(get_container)):
     ]
 
 
-@router.post("/{match_id}/join")
+@router.post("/{match_id}/join", response_model=JoinMatchResponse)
 def join_match(match_id: str, payload: JoinMatchRequest, container=Depends(get_container)):
     try:
         player = container.room_service.join_match(match_id, payload.player_name)
@@ -35,7 +43,7 @@ def join_match(match_id: str, payload: JoinMatchRequest, container=Depends(get_c
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/{match_id}/ready")
+@router.post("/{match_id}/ready", response_model=MatchStatusResponse)
 def ready_match(match_id: str, payload: ReadyMatchRequest, container=Depends(get_container)):
     try:
         state = container.room_service.ready_match(match_id, payload.player_id)
@@ -44,7 +52,7 @@ def ready_match(match_id: str, payload: ReadyMatchRequest, container=Depends(get
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/{match_id}/start")
+@router.post("/{match_id}/start", response_model=StartMatchResponse)
 async def start_match(match_id: str, container=Depends(get_container)):
     try:
         state = container.room_service.start_match(match_id)
@@ -61,7 +69,7 @@ async def start_match(match_id: str, container=Depends(get_container)):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/{match_id}/leave")
+@router.post("/{match_id}/leave", response_model=MatchStatusResponse)
 def leave_match(match_id: str, payload: LeaveMatchRequest, container=Depends(get_container)):
     try:
         state = container.room_service.leave_match(match_id, payload.player_id)

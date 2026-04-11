@@ -77,7 +77,7 @@ def test_match_tick_finishes_move() -> None:
 def test_unlock_rejects_when_not_running() -> None:
     repo, state = make_running_state(0)
     state.status = MatchStatus.WAITING
-    ok, msg = CommandService(repo).handle_unlock_command(state.match_id, 1, PieceType.HORSE, 60_000)
+    ok, msg = CommandService(repo).handle_unlock_command(state.match_id, "a", PieceType.HORSE, 60_000)
     assert ok is False
     assert "running" in msg
 
@@ -85,6 +85,6 @@ def test_unlock_rejects_when_not_running() -> None:
 def test_resign_rejects_when_ended() -> None:
     repo, state = make_running_state(0)
     state.status = MatchStatus.ENDED
-    ok, msg = CommandService(repo).handle_resign_command(state.match_id, 1, 60_000)
+    ok, msg = CommandService(repo).handle_resign_command(state.match_id, "a", 60_000)
     assert ok is False
     assert "ended" in msg
