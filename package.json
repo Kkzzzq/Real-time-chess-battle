@@ -14,6 +14,10 @@
     "lint:backend": "python -m py_compile app/**/*.py",
     "lint:frontend": "npm --prefix frontend run typecheck",
     "backend-flow": "pytest -q tests/test_backend_flow.py",
-    "contracts:export": "python scripts/export_openapi.py"
+    "contracts:export": "python scripts/export_openapi.py",
+    "contracts:generate": "bash scripts/generate_frontend_types.sh",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed",
+    "e2e:install": "playwright install --with-deps"
   }
 }

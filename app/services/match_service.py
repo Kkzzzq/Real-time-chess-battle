@@ -19,11 +19,20 @@ from app.engine.snapshot import build_match_snapshot
 from app.engine.timeline import advance_all_pieces, finish_move
 from app.engine.unlock_service import UnlockService
 from app.repository.base import MatchRepo
+from typing import Any
+from app.services.persistence_service import PersistenceService
 
 
 class MatchService:
-    def __init__(self, repo: MatchRepo) -> None:
+    def __init__(
+        self,
+        repo: MatchRepo,
+        persistence_service: PersistenceService | None = None,
+        archive_service: Any = None,
+    ) -> None:
         self.repo = repo
+        self.persistence_service = persistence_service
+        self.archive_service = archive_service
 
     def tick_once(self, match_id: str, now_ms: int | None = None) -> dict | None:
         out = self.tick_once_with_events(match_id, now_ms)
@@ -41,10 +50,20 @@ class MatchService:
         if state.status == MatchStatus.RUNNING:
             self.advance_match(state, now_ms)
 
-        self.repo.save_match(state)
+        self._persist(state, before_events)
         snapshot = build_match_snapshot(state, now_ms)
         events = [{"type": e.event_type, "ts_ms": e.ts_ms, "payload": e.payload} for e in state.event_log[before_events:]]
         return {"snapshot": snapshot, "events": events}
+
+    def _persist(self, state, before_events: int) -> None:
+        if self.persistence_service is not None:
+            self.persistence_service.persist_match_state(state)
+            self.persistence_service.archive_incremental_events(state, before_events)
+        else:
+            self.repo.save_match(state)
+
+        if state.status == MatchStatus.ENDED and self.archive_service is not None:
+            self.archive_service.archive_finished_match(state)
 
     def advance_match(self, state, now_ms: int) -> None:
         old_phase = state.phase_name
