@@ -50,6 +50,9 @@ class MatchState:
     pending_unlock_choice: dict[int, dict[int, PieceType]] = field(default_factory=dict)
     auto_unlock_processed_waves: dict[int, set[int]] = field(default_factory=dict)
     players: dict[int, dict[str, Any]] = field(default_factory=dict)
+    host_seat: int | None = None
+    host_player_id: str | None = None
+    creator_player_id: str | None = None
     event_log: list[GameEvent] = field(default_factory=list)
     command_log: list[dict[str, Any]] = field(default_factory=list)
     last_action_at: int | None = None

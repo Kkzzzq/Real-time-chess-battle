@@ -90,7 +90,8 @@ def build_piece_snapshot(state: MatchState, piece: Piece, now_ms: int, viewer_se
 
 
 def build_phase_snapshot(state: MatchState, now_ms: int) -> dict:
-    name, deadline, wave = compute_phase(now_ms, state.started_at)
+    wave_seconds = state.custom_unlock_windows or [50, 70, 90, 110]
+    name, deadline, wave = compute_phase(now_ms, state.started_at, state)
     next_phase_name = None
     next_phase_start_ms = None
     next_wave_index = None
@@ -101,19 +102,21 @@ def build_phase_snapshot(state: MatchState, now_ms: int) -> dict:
         elif name == "sealed":
             next_phase_name, next_phase_start_ms = "soldier_only", state.started_at + 30_000
         elif name == "soldier_only":
-            next_phase_name, next_phase_start_ms = "unlock_wave", state.started_at + 50_000
-            next_wave_index, next_wave_start_ms = 0, state.started_at + 50_000
+            first_wave_ms = wave_seconds[0] * 1000
+            next_phase_name, next_phase_start_ms = "unlock_wave", state.started_at + first_wave_ms
+            next_wave_index, next_wave_start_ms = 0, state.started_at + first_wave_ms
         elif name == "unlock_wave":
-            if wave < 3:
-                next_phase_name, next_phase_start_ms = "midgame", state.started_at + (50 + 20 * (wave + 1)) * 1000
-                next_wave_index, next_wave_start_ms = wave + 1, state.started_at + [70_000, 90_000, 110_000][wave]
+            if wave + 1 < len(wave_seconds):
+                next_phase_name, next_phase_start_ms = "midgame", state.started_at + (wave_seconds[wave] + 20) * 1000
+                next_wave_index = wave + 1
+                next_wave_start_ms = state.started_at + wave_seconds[next_wave_index] * 1000
             else:
                 next_phase_name, next_phase_start_ms = "midgame", state.started_at + 130_000
         elif name == "midgame":
-            latest = get_latest_wave_index(now_ms, state.started_at)
-            if latest < 3:
+            latest = get_latest_wave_index(now_ms, state.started_at, state)
+            if latest + 1 < len(wave_seconds):
                 next_wave_index = latest + 1
-                next_wave_start_ms = state.started_at + [50_000, 70_000, 90_000, 110_000][next_wave_index]
+                next_wave_start_ms = state.started_at + wave_seconds[next_wave_index] * 1000
             next_phase_name, next_phase_start_ms = "fully_unlocked", state.started_at + 130_000
 
     return {
@@ -125,22 +128,22 @@ def build_phase_snapshot(state: MatchState, now_ms: int) -> dict:
         "next_phase_start_ms": next_phase_start_ms,
         "next_wave_index": next_wave_index,
         "next_wave_start_ms": next_wave_start_ms,
-        "current_wave_start_ms": get_current_wave_start_ms(now_ms, state.started_at),
-        "current_wave_deadline_ms": get_current_wave_deadline_ms(now_ms, state.started_at),
+        "current_wave_start_ms": get_current_wave_start_ms(now_ms, state.started_at, state),
+        "current_wave_deadline_ms": get_current_wave_deadline_ms(now_ms, state.started_at, state),
     }
 
 
 def _player_unlock_options(state: MatchState, player: int, now_ms: int) -> list[str]:
-    options = get_wave_options(now_ms, state.started_at)
+    options = get_wave_options(now_ms, state.started_at, state)
     unlocked = state.unlocked_by_player.get(player, set())
     return sorted([k.value for k in options - unlocked])
 
 
 def build_unlock_snapshot(state: MatchState, now_ms: int) -> dict:
-    wave = get_current_wave_index(now_ms, state.started_at)
-    phase_name = compute_phase(now_ms, state.started_at)[0]
+    wave = get_current_wave_index(now_ms, state.started_at, state)
+    phase_name = compute_phase(now_ms, state.started_at, state)[0]
     window_open = wave >= 0
-    deadline = get_current_wave_deadline_ms(now_ms, state.started_at)
+    deadline = get_current_wave_deadline_ms(now_ms, state.started_at, state)
 
     players = {}
     for p in (1, 2):
@@ -161,13 +164,13 @@ def build_unlock_snapshot(state: MatchState, now_ms: int) -> dict:
         "fully_unlocked": state.started_at is not None and (now_ms - state.started_at) / 1000 >= 130,
         "window_open": window_open,
         "current_wave": wave,
-        "wave_start_ms": get_current_wave_start_ms(now_ms, state.started_at),
+        "wave_start_ms": get_current_wave_start_ms(now_ms, state.started_at, state),
         "wave_deadline_ms": deadline,
-        "current_wave_remaining_ms": get_current_wave_remaining_ms(now_ms, state.started_at),
+        "current_wave_remaining_ms": get_current_wave_remaining_ms(now_ms, state.started_at, state),
         "wave_timeout": deadline is not None and now_ms >= deadline,
-        "wave_options": sorted([k.value for k in get_wave_options(now_ms, state.started_at)]),
-        "next_wave_index": None if wave >= 3 else wave + 1,
-        "next_wave_start_ms": None if state.started_at is None or wave >= 3 else state.started_at + [50_000, 70_000, 90_000, 110_000][wave + 1],
+        "wave_options": sorted([k.value for k in get_wave_options(now_ms, state.started_at, state)]),
+        "next_wave_index": None if wave + 1 >= len(state.custom_unlock_windows or [50, 70, 90, 110]) else wave + 1,
+        "next_wave_start_ms": None if state.started_at is None or wave + 1 >= len(state.custom_unlock_windows or [50, 70, 90, 110]) else state.started_at + (state.custom_unlock_windows or [50, 70, 90, 110])[wave + 1] * 1000,
         "players": players,
     }
 
@@ -217,14 +220,18 @@ def build_board_snapshot(state: MatchState, now_ms: int, runtime: bool = False) 
 
 def _snapshot_players(state: MatchState) -> dict[str, dict]:
     players: dict[str, dict] = {}
+    effective_host_player_id = state.host_player_id
+    if effective_host_player_id is None and state.host_seat in state.players:
+        effective_host_player_id = state.players[state.host_seat].get("player_id")
     for seat, info in state.players.items():
+        player_id = info.get("player_id")
         players[str(seat)] = {
             "seat": seat,
-            "player_id": info.get("player_id"),
+            "player_id": player_id,
             "name": info.get("name"),
             "ready": bool(info.get("ready", False)),
             "online": bool(info.get("online", False)),
-            "is_host": bool(info.get("is_host", False)),
+            "is_host": (state.host_seat == seat) or (effective_host_player_id is not None and player_id == effective_host_player_id),
         }
     return players
 

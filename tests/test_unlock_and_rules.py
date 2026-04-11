@@ -106,3 +106,36 @@ def test_version_is_event_version_only() -> None:
     p.target_x, p.target_y = 0, 5
     MatchService(repo).tick_once(state.match_id, 500)
     assert state.version >= before
+
+
+
+def test_custom_unlock_windows_drive_phase() -> None:
+    repo = MemoryRepo()
+    room = RoomService(repo)
+    state = room.create_match(custom_unlock_windows=[50, 80, 100])
+    state.status = MatchStatus.RUNNING
+    state.started_at = 0
+    assert compute_phase(85_000, 0, state)[0] == "unlock_wave"
+
+
+def test_ruleset_name_non_standard_rejected() -> None:
+    repo = MemoryRepo()
+    room = RoomService(repo)
+    try:
+        room.create_match(ruleset_name="blitz")
+    except ValueError as e:
+        assert "unsupported ruleset_name" in str(e)
+    else:
+        raise AssertionError("expected ValueError")
+
+
+
+def test_custom_unlock_windows_rejects_pre_50() -> None:
+    repo = MemoryRepo()
+    room = RoomService(repo)
+    try:
+        room.create_match(custom_unlock_windows=[40, 80])
+    except ValueError as e:
+        assert "[50, 129]" in str(e)
+    else:
+        raise AssertionError("expected ValueError")

@@ -1,149 +1,126 @@
-# Real-time Chess Battle (Realtime Xiangqi API)
+# Real-time Chess Battle
 
-纯后端实时中国象棋服务（FastAPI + WebSocket），**不内置 demo 页面**。
+后端（FastAPI + WebSocket）+ 前端（React + Vite）的单仓项目。
 
-## 快速开始
+## 1) 当前项目边界（先看）
 
+- 当前仅支持 **2 名玩家对局**。
+- `query` / `commands` / `ws` 均要求 `player_id + player_token`，**不支持匿名 spectator**。
+- 前端 WebSocket 采用 **single active-match client** 策略：同一前端实例一次只维护一个房间连接。
+- `host` 的单一来源是房间级字段：`host_seat` + `host_player_id`（`is_host` 为投影视图）。
+
+## 2) 快速启动
+
+### Backend
 ```bash
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## 测试
-
+### Frontend
 ```bash
-pytest -q
+cd frontend
+npm install
+cp .env.example .env
+npm run dev
 ```
 
-> 集成测试必须使用 `with TestClient(app) as client:` 触发 lifespan，避免 `app.state.container` 未初始化。
+前端路由：
+- `/` Lobby
+- `/room/:matchId` 房间等待页
+- `/game/:matchId` 对局页
 
-## 示例入口（替代 demo）
+## 3) 身份与会话
 
-- `examples/create_join_start_flow.sh`：完整 HTTP 流程（create/join/ready/start/state/move）。
-- `examples/ws_client_example.py`：WebSocket 订阅 + ping + 命令回执示例。
+- `POST /matches/{id}/join` 返回 `player_id + player_token + player_token_expires_at`。
+- `POST /matches/{id}/reconnect` 使用同一凭证恢复。
+- token TTL 由 `PLAYER_TOKEN_TTL_SECONDS` 控制（默认 86400 秒）。
+- 前端 `sessionStore` 会在 hydrate 时清理本地过期 token；`useSessionBootstrap` 会将 reconnect 返回的完整玩家信息回写 session。
 
-## 项目定位
+## 4) 房间与 host 规则
 
-- 提供 HTTP API + WebSocket API。
-- 适用于前端、自动化脚本、机器人客户端接入。
-- 无前端页面；推荐通过 OpenAPI、curl、脚本和测试驱动联调。
+- 首位入房玩家成为 host。
+- 只有 host 可以 start。
+- host 离开 waiting 房间时，host 自动转移给当前最小 seat，并同步 `host_player_id`。
+- `players[*].is_host` 总是由房间级 host 字段计算。
 
-## 身份模型（必须先理解）
+## 5) WebSocket 协议职责
 
-- `player_id`：外部身份（HTTP/WS 命令与查询使用）。
-- `seat`：对局内座位（1/2），用于规则归属与 `piece.owner`。
-- `piece.owner` 使用 `seat`，不是 `player_id`。
+- `subscribed`: 订阅成功元信息。
+- `snapshot`: 全量状态快照。
+- `events`: 增量事件批量。
+- `event`: 增量事件单条。
+- `command_result`: 命令执行结果。
+- `pong`: 心跳响应。
 
-关系：`player_id -> seat -> piece.owner`。
+前端 store 约定：
+- `snapshot` 负责全量覆盖。
+- `events/event` 负责增量事件流；和 snapshot 内事件做去重合并。
 
-## Room / Player 生命周期
+## 6) 棋盘显示策略
 
-### Room
-- `waiting`：可 `join/ready/start`。
-- `running`：tick loop 推进；`leave` 将玩家标记为 `offline`。
-- `ended`：允许查询，不允许重新 `join/start`。
-- `deleted`：无玩家时删除房间并停止 loop。
+前端消费三层信息：
+- `board`：逻辑占位棋盘（落子格）。
+- `runtime_board`：运行时占位棋盘（移动中的路径占位）。
+- `pieces.display_x/display_y`：棋子动画 overlay。
 
-### Player
-- `joined` -> `ready` -> `running` -> (`offline` | `left`)。
-- `offline` 当前版本不自动 reconnect（后续可扩展，以 `player_id` 为主键恢复）。
+多占用格：
+- 主显示 `primary_occupant`。
+- 若 `occupants.length > 1`，格子会显示额外 `+N` 标识。
 
-## API 概览
+## 7) 运维接口与成熟度
 
-### Match
-- `POST /matches`（支持房规参数）
-- `GET /matches`
-- `POST /matches/{match_id}/join`
-- `POST /matches/{match_id}/ready`
-- `POST /matches/{match_id}/start`
-- `POST /matches/{match_id}/leave`
+- `GET /health`
+- `GET /ready`
+- `GET /metrics`：当前为 JSON 简易指标（`matches_total` / `matches_running` / `ws_active_matches` / `ws_active_connections`），**不是 Prometheus 格式**。
 
-`POST /matches` 请求体示例：
+## 8) Repo 与持久化
 
-```json
-{
-  "ruleset_name": "standard",
-  "allow_draw": true,
-  "tick_ms": 100,
-  "custom_unlock_windows": null
-}
-```
+- `MATCH_REPO_BACKEND=memory`（默认）
+- `MATCH_REPO_BACKEND=pickle`
+  - `MATCH_REPO_PICKLE_PATH` 控制文件路径
 
-### Command（统一 `player_id`）
-- `POST /matches/{match_id}/commands/move`
-- `POST /matches/{match_id}/commands/unlock`
-- `POST /matches/{match_id}/commands/resign`
+> PickleRepo 仅适合单机开发，不是生产级并发存储方案。
 
-失败使用 HTTP 错误码：`400/403/404/409`。
+## 9) 部署
 
-### Query（只读）
-- `GET /matches/{match_id}/state?player_id=...`
-- `GET /matches/{match_id}/phase`
-- `GET /matches/{match_id}/unlock-state`
-- `GET /matches/{match_id}/events`
-- `GET /matches/{match_id}/board`
-- `GET /matches/{match_id}/pieces/{piece_id}/legal-moves?player_id=...`
-- `GET /matches/{match_id}/players`
+- `Dockerfile.backend`
+- `Dockerfile.frontend`
+- `docker-compose.dev.yml`：本地开发
+- `docker-compose.prod.yml`：生产示例（包含后端数据卷与基础环境变量）
 
-## Snapshot 字段语义
+## 10) 环境变量
 
-`/state` 返回 `MatchSnapshotResponse`，关键字段：
+### Backend
+- `ALLOWED_ORIGINS`：逗号分隔 CORS 白名单。
+- `MATCH_REPO_BACKEND`：`memory` / `pickle`。
+- `MATCH_REPO_PICKLE_PATH`：pickle 文件路径。
+- `PLAYER_TOKEN_TTL_SECONDS`：对局 token TTL。
 
-- `match_meta.ruleset`：当前房规（`ruleset_name/allow_draw/tick_ms/custom_unlock_windows`）。
-- `players[seat]`：统一输出 `seat + player_id + online/ready/host`。
-- `phase`：含 `next_phase_*` 和 `next_wave_*`。
-- `unlock`：含窗口状态、波次、每方 `can_choose_now/waiting_for_timeout/choice_source`。
-- `board`：逻辑棋盘（按 `piece.x/y`）。
-- `runtime_board`：运行时占用棋盘（按 runtime occupancy）。
-- `pieces[*].commandability`：
-  - `owner_*` 永远可用（owner 视角）。
-  - 传 `player_id` 查询 `/state` 时会补 `viewer_*`（viewer 视角）。
+### Frontend
+- `VITE_API_BASE_URL`
+- `VITE_WS_BASE_URL`
 
-## board / runtime_board / display 坐标关系
+## 11) 工程脚本
 
-- `board`：逻辑落点棋盘，稳定用于规则核对。
-- `runtime_board`：运行时占用；每个 cell 是 `occupants` 列表 + `primary_occupant`。
-- `pieces.display_x/display_y`：连续显示坐标（浮点）。
+根目录：
+- `npm run test:backend`
+- `npm run contracts:export`
+- `npm run dev:all`
 
-## legal-moves 语义
+前端：
+- `npm --prefix frontend run typecheck`
+- `npm --prefix frontend run test`
+- `npm --prefix frontend run build`
 
-返回结构分层：
-- `static.targets`：纯规则合法落点。
-- `actionable`：viewer 上下文相关结果：
-  - `viewer_seat`
-  - `actionable_targets`
-  - `executable`
-  - `actionable_context`
-  - `reason`
+## 12) 合同同步
 
-不传 `player_id` 时：
-- 仍返回 `static.targets`。
-- `actionable_targets` 为空。
-- `actionable_context=provide_player_id_for_actionable_targets`。
+- `python scripts/export_openapi.py` 导出 `docs/contracts/openapi.json`。
+- 当前 `frontend/src/types/contracts.ts` 仍有手工类型；后续可切换为 OpenAPI 生成。
 
-## WebSocket 协议
+## 13) 已知限制
 
-- `WS /matches/{match_id}/ws`
-- `WS /ws/matches/{match_id}`（兼容）
-
-连接首帧：
-1. `subscribed`
-2. `snapshot`
-
-命令帧：
-- `move`: `{"type":"move","player_id":"...","piece_id":"...","target_x":4,"target_y":5}`
-- `unlock`: `{"type":"unlock","player_id":"...","kind":"horse"}`
-- `resign`: `{"type":"resign","player_id":"..."}`
-
-回执策略（固定）：
-- 命令直返：`command_result` + `events(delta)`。
-- `snapshot/event` 主通道来自 tick loop 广播。
-- 客户端需对 event/snapshot 做幂等处理。
-
-## version 语义
-
-`match_meta.version` 是 **event version**：
-- 仅当 `state.add_event()` 发生时增长。
-- 不是完整 snapshot version。
-- 诸如 `display_x`、剩余冷却、phase remaining 的连续变化不保证触发 version 增长。
-
+- 无账号系统（仅对局级 token）。
+- 无 spectator。
+- WS 前端单活动连接策略不保证多标签一致性。
+- `/metrics` 仍是轻量 JSON，不是完整监控体系。
