@@ -39,6 +39,7 @@ class PlayerRepo(Protocol):
     def upsert_players(self, state: MatchState) -> None: ...
 
 
+<<<<<<< HEAD
 class SessionRepo(Protocol):
     """Session persistence abstraction (token metadata)."""
 
@@ -48,6 +49,8 @@ class SessionRepo(Protocol):
 
 
 
+=======
+>>>>>>> origin/main
 class MatchRepo(Protocol):
     """Legacy all-in-one repository interface used by current services.
 

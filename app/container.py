@@ -6,9 +6,13 @@ from dataclasses import dataclass
 from app.repository.base import MatchRepo
 from app.repository.memory_repo import MemoryRepo
 from app.repository.pickle_repo import PickleRepo
+from app.repository.redis.presence_repo_redis import RedisPresenceRepo
+from app.repository.redis.runtime_repo_redis import RedisRuntimeRepo
 from app.runtime.broadcaster import Broadcaster
+from app.runtime.presence_service import PresenceService
 from app.runtime.tick_loop import TickLoop
 from app.services.command_service import CommandService
+from app.services.match_archive_service import MatchArchiveService
 from app.services.match_service import MatchService
 from app.services.persistence_service import PersistenceService
 from app.services.player_session_service import PlayerSessionService

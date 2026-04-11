@@ -16,8 +16,13 @@
     "backend-flow": "pytest -q tests/test_backend_flow.py",
     "contracts:export": "python scripts/export_openapi.py",
     "contracts:generate": "bash scripts/generate_frontend_types.sh",
+<<<<<<< HEAD
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
     "e2e:install": "playwright install --with-deps"
+=======
+    "e2e": "echo \"Install Playwright first, then run e2e specs\" && exit 1",
+    "e2e:headed": "echo \"Install Playwright first, then run headed e2e\" && exit 1"
+>>>>>>> origin/main
   }
 }

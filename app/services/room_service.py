@@ -21,7 +21,10 @@ from app.domain.player_state_machine import PlayerLifecycle, PlayerStateMachine
 from app.domain.room_state_machine import RoomStateMachine
 from app.engine.board_setup import create_standard_board
 from app.repository.base import MatchRepo
+<<<<<<< HEAD
 from app.services.persistence_service import PersistenceService
+=======
+>>>>>>> origin/main
 from app.services.player_session_service import PlayerSessionService
 
 logger = logging.getLogger(__name__)
@@ -29,6 +32,7 @@ TOKEN_TTL_SECONDS = int(os.getenv("PLAYER_TOKEN_TTL_SECONDS", "86400"))
 
 
 class RoomService:
+<<<<<<< HEAD
     def __init__(
         self,
         repo: MatchRepo,
@@ -38,6 +42,11 @@ class RoomService:
         self.repo = repo
         self.persistence_service = persistence_service
         self.session_service = session_service or PlayerSessionService(TOKEN_TTL_SECONDS, persistence_service=persistence_service)
+=======
+    def __init__(self, repo: MatchRepo, session_service: PlayerSessionService | None = None) -> None:
+        self.repo = repo
+        self.session_service = session_service or PlayerSessionService(TOKEN_TTL_SECONDS)
+>>>>>>> origin/main
 
     def create_match(
         self,
@@ -85,7 +94,11 @@ class RoomService:
         seat = 1 if 1 not in state.players else 2
         if seat in state.players:
             raise ValueError("match full")
+<<<<<<< HEAD
         issued = self.session_service.issue_session(match_id=match_id, now_ms=now_ms)
+=======
+        issued = self.session_service.issue(now_ms=now_ms)
+>>>>>>> origin/main
         player = {
             "player_id": issued.player_id,
             "player_token": issued.player_token,
@@ -115,9 +128,13 @@ class RoomService:
         now_ms = int(time.time() * 1000)
         for seat, info in state.players.items():
             if info.get("player_id") == player_id and info.get("player_token") == player_token:
+<<<<<<< HEAD
                 self.session_service.validate_session(
                     match_id=match_id,
                     player_id=player_id,
+=======
+                self.session_service.validate(
+>>>>>>> origin/main
                     token=player_token,
                     expected_token=str(info.get("player_token", "")),
                     expires_at=info.get("player_token_expires_at"),
@@ -190,8 +207,11 @@ class RoomService:
                 PlayerStateMachine.require_transition(lifecycle, PlayerLifecycle.OFFLINE)
                 info["online"] = False
                 info["lifecycle"] = PlayerLifecycle.OFFLINE.value
+<<<<<<< HEAD
                 if self.persistence_service is not None:
                     self.persistence_service.mark_offline(match_id, player_id)
+=======
+>>>>>>> origin/main
                 state.add_event(GameEvent(EVENT_PLAYER_OFFLINE, now_ms, {"seat": seat, "player_id": player_id}))
             if not state.players:
                 self.repo.delete_match(match_id)
