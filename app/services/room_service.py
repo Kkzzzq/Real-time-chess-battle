@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import os
-import secrets
 import time
 import uuid
 
@@ -18,23 +17,20 @@ from app.domain.events import (
     GameEvent,
 )
 from app.domain.models import MatchState
+from app.domain.player_state_machine import PlayerLifecycle, PlayerStateMachine
+from app.domain.room_state_machine import RoomStateMachine
 from app.engine.board_setup import create_standard_board
 from app.repository.base import MatchRepo
-
-
-logger = logging.getLogger(__name__)
-TOKEN_TTL_SECONDS = int(os.getenv("PLAYER_TOKEN_TTL_SECONDS", "86400"))
-
+from app.services.player_session_service import PlayerSessionService
 
 logger = logging.getLogger(__name__)
 TOKEN_TTL_SECONDS = int(os.getenv("PLAYER_TOKEN_TTL_SECONDS", "86400"))
 
-
-TOKEN_TTL_SECONDS = int(os.getenv("PLAYER_TOKEN_TTL_SECONDS", "86400"))
 
 class RoomService:
-    def __init__(self, repo: MatchRepo) -> None:
+    def __init__(self, repo: MatchRepo, session_service: PlayerSessionService | None = None) -> None:
         self.repo = repo
+        self.session_service = session_service or PlayerSessionService(TOKEN_TTL_SECONDS)
 
     def create_match(
         self,
@@ -82,14 +78,15 @@ class RoomService:
         seat = 1 if 1 not in state.players else 2
         if seat in state.players:
             raise ValueError("match full")
-        expires_at = now_ms + TOKEN_TTL_SECONDS * 1000
+        issued = self.session_service.issue(now_ms=now_ms)
         player = {
-            "player_id": uuid.uuid4().hex[:8],
-            "player_token": secrets.token_urlsafe(24),
-            "player_token_expires_at": expires_at,
+            "player_id": issued.player_id,
+            "player_token": issued.player_token,
+            "player_token_expires_at": issued.player_token_expires_at,
             "name": player_name,
             "ready": False,
             "online": True,
+            "lifecycle": PlayerLifecycle.JOINED.value,
         }
         state.players[seat] = player
         if state.host_seat is None:
@@ -109,9 +106,16 @@ class RoomService:
         now_ms = int(time.time() * 1000)
         for seat, info in state.players.items():
             if info.get("player_id") == player_id and info.get("player_token") == player_token:
-                exp = info.get("player_token_expires_at")
-                if exp is not None and now_ms > int(exp):
-                    raise ValueError("player token expired")
+                self.session_service.validate(
+                    token=player_token,
+                    expected_token=str(info.get("player_token", "")),
+                    expires_at=info.get("player_token_expires_at"),
+                    now_ms=now_ms,
+                )
+                lifecycle = PlayerLifecycle(info.get("lifecycle", PlayerLifecycle.JOINED.value))
+                if lifecycle == PlayerLifecycle.OFFLINE:
+                    PlayerStateMachine.require_transition(lifecycle, PlayerLifecycle.RECONNECTED)
+                    info["lifecycle"] = PlayerLifecycle.RECONNECTED.value
                 info["online"] = True
                 state.now_ms = now_ms
                 self.repo.save_match(state)
@@ -162,7 +166,10 @@ class RoomService:
                 state.add_event(GameEvent(EVENT_PLAYER_LEFT, now_ms, {"seat": seat, "player_id": player_id}))
                 self._reassign_host_if_needed(state, now_ms)
             else:
+                lifecycle = PlayerLifecycle(info.get("lifecycle", PlayerLifecycle.RUNNING.value))
+                PlayerStateMachine.require_transition(lifecycle, PlayerLifecycle.OFFLINE)
                 info["online"] = False
+                info["lifecycle"] = PlayerLifecycle.OFFLINE.value
                 state.add_event(GameEvent(EVENT_PLAYER_OFFLINE, now_ms, {"seat": seat, "player_id": player_id}))
             if not state.players:
                 self.repo.delete_match(match_id)
@@ -182,7 +189,10 @@ class RoomService:
             if info.get("player_id") == player_id:
                 if info.get("ready"):
                     raise ValueError("already ready")
+                lifecycle = PlayerLifecycle(info.get("lifecycle", PlayerLifecycle.JOINED.value))
+                PlayerStateMachine.require_transition(lifecycle, PlayerLifecycle.READY)
                 info["ready"] = True
+                info["lifecycle"] = PlayerLifecycle.READY.value
                 state.add_event(GameEvent(EVENT_PLAYER_READY, now_ms, {"seat": seat, "player_id": player_id}))
                 self.repo.save_match(state)
                 logger.info("audit action=ready match_id=%s seat=%s player_id=%s", match_id, seat, player_id)
@@ -213,9 +223,14 @@ class RoomService:
         if not all(p.get("ready") for p in state.players.values()):
             raise ValueError("players not ready")
         now = int(time.time() * 1000)
+        RoomStateMachine.require_transition(state.status, MatchStatus.RUNNING)
         state.started_at = now
         state.now_ms = now
         state.status = MatchStatus.RUNNING
+        for info in state.players.values():
+            lifecycle = PlayerLifecycle(info.get("lifecycle", PlayerLifecycle.READY.value))
+            if PlayerStateMachine.can_transition(lifecycle, PlayerLifecycle.RUNNING):
+                info["lifecycle"] = PlayerLifecycle.RUNNING.value
         state.last_action_at = now
         state.last_capture_at = now
         state.add_event(GameEvent(EVENT_MATCH_STARTED, now, {}))
