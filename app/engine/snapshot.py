@@ -10,6 +10,7 @@ from app.engine.phase import (
     get_current_wave_index,
     get_current_wave_remaining_ms,
     get_current_wave_start_ms,
+    get_latest_wave_index,
     get_wave_options,
     is_piece_kind_allowed_by_phase,
 )
@@ -32,12 +33,22 @@ def _piece_disabled_reason(state: MatchState, piece: Piece, now_ms: int) -> str 
     return None
 
 
-def build_piece_snapshot(state: MatchState, piece: Piece, now_ms: int) -> dict:
+def _viewer_commandability(state: MatchState, piece: Piece, now_ms: int, viewer_seat: int | None) -> tuple[bool | None, str | None]:
+    if viewer_seat is None:
+        return None, None
+    if viewer_seat != piece.owner:
+        return False, "not_piece_owner"
+    disabled_reason = _piece_disabled_reason(state, piece, now_ms)
+    return disabled_reason is None, disabled_reason
+
+
+def build_piece_snapshot(state: MatchState, piece: Piece, now_ms: int, viewer_seat: int | None = None) -> dict:
     px, py = get_piece_display_position(piece, now_ms)
     remain_move = max(0, (piece.move_end_at or 0) - now_ms) if piece.is_moving else 0
     remain_cd = max(0, piece.cooldown_end_at - now_ms)
     seg = get_piece_segment_state(piece, now_ms)
     disabled_reason = _piece_disabled_reason(state, piece, now_ms)
+    viewer_can_command, viewer_disabled_reason = _viewer_commandability(state, piece, now_ms, viewer_seat)
     runtime_cells = sorted(list(get_piece_runtime_cells(piece, now_ms)))
     return {
         "id": piece.id,
@@ -58,6 +69,14 @@ def build_piece_snapshot(state: MatchState, piece: Piece, now_ms: int) -> dict:
         "cooldown_remaining_ms": remain_cd,
         "can_command": disabled_reason is None,
         "disabled_reason": disabled_reason,
+        "can_command_scope": "owner_view",
+        "commandability": {
+            "owner_can_command": disabled_reason is None,
+            "owner_disabled_reason": disabled_reason,
+            "viewer_can_command": viewer_can_command,
+            "viewer_disabled_reason": viewer_disabled_reason,
+            "note": "can_command is owner_view; use commandability.viewer_* when a viewer/player_id is provided.",
+        },
         "runtime_cells": runtime_cells,
         "segment": {
             "index": seg["segment_index"],
@@ -72,11 +91,42 @@ def build_piece_snapshot(state: MatchState, piece: Piece, now_ms: int) -> dict:
 
 def build_phase_snapshot(state: MatchState, now_ms: int) -> dict:
     name, deadline, wave = compute_phase(now_ms, state.started_at)
+    next_phase_name = None
+    next_phase_start_ms = None
+    next_wave_index = None
+    next_wave_start_ms = None
+    if state.started_at is not None:
+        if name == "waiting":
+            next_phase_name, next_phase_start_ms = "sealed", state.started_at
+        elif name == "sealed":
+            next_phase_name, next_phase_start_ms = "soldier_only", state.started_at + 30_000
+        elif name == "soldier_only":
+            next_phase_name, next_phase_start_ms = "unlock_wave", state.started_at + 50_000
+            next_wave_index, next_wave_start_ms = 0, state.started_at + 50_000
+        elif name == "unlock_wave":
+            if wave < 3:
+                next_phase_name, next_phase_start_ms = "midgame", state.started_at + (50 + 20 * (wave + 1)) * 1000
+                next_wave_index, next_wave_start_ms = wave + 1, state.started_at + [70_000, 90_000, 110_000][wave]
+            else:
+                next_phase_name, next_phase_start_ms = "midgame", state.started_at + 130_000
+        elif name == "midgame":
+            latest = get_latest_wave_index(now_ms, state.started_at)
+            if latest < 3:
+                next_wave_index = latest + 1
+                next_wave_start_ms = state.started_at + [50_000, 70_000, 90_000, 110_000][next_wave_index]
+            next_phase_name, next_phase_start_ms = "fully_unlocked", state.started_at + 130_000
+
     return {
         "name": name,
         "deadline_ms": deadline,
         "remaining_ms": None if deadline is None else max(0, deadline - now_ms),
         "wave_index": wave,
+        "next_phase_name": next_phase_name,
+        "next_phase_start_ms": next_phase_start_ms,
+        "next_wave_index": next_wave_index,
+        "next_wave_start_ms": next_wave_start_ms,
+        "current_wave_start_ms": get_current_wave_start_ms(now_ms, state.started_at),
+        "current_wave_deadline_ms": get_current_wave_deadline_ms(now_ms, state.started_at),
     }
 
 
@@ -101,6 +151,9 @@ def build_unlock_snapshot(state: MatchState, now_ms: int) -> dict:
             "wave_choice": choice.value if choice else None,
             "has_chosen": choice is not None,
             "auto_selected": wave >= 0 and wave in state.auto_unlock_processed_waves.get(p, set()),
+            "can_choose_now": wave >= 0 and choice is None and state.status == MatchStatus.RUNNING,
+            "waiting_for_timeout": wave >= 0 and choice is not None and state.status == MatchStatus.RUNNING,
+            "choice_source": "none" if choice is None else ("auto" if wave in state.auto_unlock_processed_waves.get(p, set()) else "manual"),
         }
 
     return {
@@ -113,6 +166,8 @@ def build_unlock_snapshot(state: MatchState, now_ms: int) -> dict:
         "current_wave_remaining_ms": get_current_wave_remaining_ms(now_ms, state.started_at),
         "wave_timeout": deadline is not None and now_ms >= deadline,
         "wave_options": sorted([k.value for k in get_wave_options(now_ms, state.started_at)]),
+        "next_wave_index": None if wave >= 3 else wave + 1,
+        "next_wave_start_ms": None if state.started_at is None or wave >= 3 else state.started_at + [50_000, 70_000, 90_000, 110_000][wave + 1],
         "players": players,
     }
 
@@ -121,18 +176,35 @@ def build_recent_events(state: MatchState) -> list[dict]:
     return [{"type": e.event_type, "ts_ms": e.ts_ms, "payload": e.payload} for e in state.event_log[-20:]]
 
 
-def build_board_snapshot(state: MatchState, now_ms: int) -> dict:
-    cells = [[None for _ in range(BOARD_COLS)] for _ in range(BOARD_ROWS)]
+def _empty_cell() -> dict:
+    return {"occupants": [], "primary_occupant": None}
+
+
+def build_board_snapshot(state: MatchState, now_ms: int, runtime: bool = False) -> dict:
+    cells = [[_empty_cell() for _ in range(BOARD_COLS)] for _ in range(BOARD_ROWS)]
     living = [p for p in state.pieces.values() if p.alive]
     for piece in living:
-        cells[piece.y][piece.x] = {
+        target_cells = get_piece_runtime_cells(piece, now_ms) if runtime else {(piece.x, piece.y)}
+        occ = {
             "piece_id": piece.id,
             "owner": piece.owner,
             "kind": piece.kind.value,
             "moving": piece.is_moving,
         }
+        for cell_x, cell_y in target_cells:
+            cell = cells[cell_y][cell_x]
+            cell["occupants"].append(occ)
+
+    for row in cells:
+        for cell in row:
+            if cell["occupants"]:
+                sorted_occ = sorted(cell["occupants"], key=lambda o: (not o["moving"], o["piece_id"]))
+                cell["occupants"] = sorted_occ
+                cell["primary_occupant"] = sorted_occ[0]
+
     return {
         "cells": cells,
+        "mode": "runtime" if runtime else "logical",
         "stats": {
             "alive_total": len(living),
             "alive_by_player": {
@@ -143,7 +215,21 @@ def build_board_snapshot(state: MatchState, now_ms: int) -> dict:
     }
 
 
-def build_match_snapshot(state: MatchState, now_ms: int) -> dict:
+def _snapshot_players(state: MatchState) -> dict[str, dict]:
+    players: dict[str, dict] = {}
+    for seat, info in state.players.items():
+        players[str(seat)] = {
+            "seat": seat,
+            "player_id": info.get("player_id"),
+            "name": info.get("name"),
+            "ready": bool(info.get("ready", False)),
+            "online": bool(info.get("online", False)),
+            "is_host": bool(info.get("is_host", False)),
+        }
+    return players
+
+
+def build_match_snapshot(state: MatchState, now_ms: int, viewer_seat: int | None = None) -> dict:
     return {
         "match_meta": {
             "match_id": state.match_id,
@@ -154,12 +240,19 @@ def build_match_snapshot(state: MatchState, now_ms: int) -> dict:
             "started_at": state.started_at,
             "now_ms": now_ms,
             "version": state.version,
+            "ruleset": {
+                "ruleset_name": state.ruleset_name,
+                "allow_draw": state.allow_draw,
+                "tick_ms": state.tick_ms,
+                "custom_unlock_windows": state.custom_unlock_windows,
+            },
         },
-        "players": state.players,
+        "players": _snapshot_players(state),
         "phase": build_phase_snapshot(state, now_ms),
         "unlock": build_unlock_snapshot(state, now_ms),
-        "board": build_board_snapshot(state, now_ms),
-        "pieces": [build_piece_snapshot(state, p, now_ms) for p in state.pieces.values()],
+        "board": build_board_snapshot(state, now_ms, runtime=False),
+        "runtime_board": build_board_snapshot(state, now_ms, runtime=True),
+        "pieces": [build_piece_snapshot(state, p, now_ms, viewer_seat=viewer_seat) for p in state.pieces.values()],
         "events": build_recent_events(state),
         "command_log": state.command_log[-50:],
     }

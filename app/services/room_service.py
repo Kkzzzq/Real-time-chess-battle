@@ -23,7 +23,13 @@ class RoomService:
     def __init__(self, repo: MemoryRepo) -> None:
         self.repo = repo
 
-    def create_match(self) -> MatchState:
+    def create_match(
+        self,
+        ruleset_name: str = "standard",
+        allow_draw: bool = True,
+        tick_ms: int = 100,
+        custom_unlock_windows: list[int] | None = None,
+    ) -> MatchState:
         now = int(time.time() * 1000)
         state = MatchState(
             match_id=uuid.uuid4().hex[:12],
@@ -31,12 +37,17 @@ class RoomService:
             now_ms=now,
             pieces=create_standard_board(),
             unlocked_by_player={1: {PieceType.SOLDIER}, 2: {PieceType.SOLDIER}},
+            ruleset_name=ruleset_name,
+            allow_draw=allow_draw,
+            tick_ms=tick_ms,
+            custom_unlock_windows=custom_unlock_windows,
         )
         state.add_event(GameEvent(EVENT_MATCH_CREATED, now, {"match_id": state.match_id}))
         self.repo.save_match(state)
         return state
 
     def join_match(self, match_id: str, player_name: str) -> dict:
+        now_ms = int(time.time() * 1000)
         state = self.repo.get_match(match_id)
         if state is None:
             raise ValueError("match not found")
@@ -46,16 +57,17 @@ class RoomService:
         if seat in state.players:
             raise ValueError("match full")
         player = {
-            "id": uuid.uuid4().hex[:8],
+            "player_id": uuid.uuid4().hex[:8],
             "name": player_name,
             "ready": False,
             "online": True,
             "is_host": len(state.players) == 0,
         }
         state.players[seat] = player
-        state.add_event(GameEvent(EVENT_PLAYER_JOINED, state.now_ms, {"seat": seat, "name": player_name}))
+        state.now_ms = now_ms
+        state.add_event(GameEvent(EVENT_PLAYER_JOINED, now_ms, {"seat": seat, "name": player_name}))
         self.repo.save_match(state)
-        return {"seat": seat, **player}
+        return {"seat": seat, "player_id": player["player_id"], **player}
 
     def _reassign_host_if_needed(self, state: MatchState, now_ms: int) -> None:
         hosts = [s for s, info in state.players.items() if info.get("is_host")]
@@ -74,7 +86,7 @@ class RoomService:
         now_ms = int(time.time() * 1000)
 
         for seat, info in list(state.players.items()):
-            if info.get("id") != player_id:
+            if info.get("player_id") != player_id:
                 continue
             if state.status == MatchStatus.WAITING:
                 was_host = bool(info.get("is_host"))
@@ -98,7 +110,7 @@ class RoomService:
             raise ValueError("match not found")
         now_ms = int(time.time() * 1000)
         for seat, info in state.players.items():
-            if info.get("id") == player_id:
+            if info.get("player_id") == player_id:
                 if info.get("ready"):
                     raise ValueError("already ready")
                 info["ready"] = True

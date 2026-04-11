@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from app.domain.enums import MatchStatus, PieceType
-from app.engine.board_setup import create_standard_board
 from app.engine.move_rules import validate_move
 from app.engine.phase import compute_phase
 from app.engine.unlock_service import UnlockService
@@ -15,7 +14,10 @@ def make_running_state(started_at: int = 0):
     repo = MemoryRepo()
     room = RoomService(repo)
     state = room.create_match()
-    state.players = {1: {"id": "a", "ready": True}, 2: {"id": "b", "ready": True}}
+    state.players = {
+        1: {"player_id": "a", "ready": True, "online": True},
+        2: {"player_id": "b", "ready": True, "online": True},
+    }
     state.status = MatchStatus.RUNNING
     state.started_at = started_at
     state.now_ms = started_at
@@ -77,7 +79,7 @@ def test_match_tick_finishes_move() -> None:
 def test_unlock_rejects_when_not_running() -> None:
     repo, state = make_running_state(0)
     state.status = MatchStatus.WAITING
-    ok, msg = CommandService(repo).handle_unlock_command(state.match_id, 1, PieceType.HORSE, 60_000)
+    ok, msg = CommandService(repo).handle_unlock_command(state.match_id, "a", PieceType.HORSE, 60_000)
     assert ok is False
     assert "running" in msg
 
@@ -85,6 +87,22 @@ def test_unlock_rejects_when_not_running() -> None:
 def test_resign_rejects_when_ended() -> None:
     repo, state = make_running_state(0)
     state.status = MatchStatus.ENDED
-    ok, msg = CommandService(repo).handle_resign_command(state.match_id, 1, 60_000)
+    ok, msg = CommandService(repo).handle_resign_command(state.match_id, "a", 60_000)
     assert ok is False
     assert "ended" in msg
+
+
+def test_version_is_event_version_only() -> None:
+    repo, state = make_running_state(0)
+    before = state.version
+    # move-only timeline change without add_event should keep version.
+    p = state.pieces["p1_soldier_1"]
+    p.is_moving = True
+    p.move_start_at = 0
+    p.move_end_at = 1000
+    p.move_total_ms = 1000
+    p.path_points = [(0, 5)]
+    p.start_x, p.start_y = 0, 6
+    p.target_x, p.target_y = 0, 5
+    MatchService(repo).tick_once(state.match_id, 500)
+    assert state.version >= before
