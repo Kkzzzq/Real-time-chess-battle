@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 import time
 import uuid
 
@@ -30,6 +31,18 @@ class RoomService:
         tick_ms: int = 100,
         custom_unlock_windows: list[int] | None = None,
     ) -> MatchState:
+        if ruleset_name != "standard":
+            raise ValueError("unsupported ruleset_name, only 'standard' is currently supported")
+        if custom_unlock_windows is not None:
+            normalized = sorted(set(custom_unlock_windows))
+            if len(normalized) != len(custom_unlock_windows):
+                raise ValueError("custom_unlock_windows must not contain duplicates")
+            if len(normalized) == 0:
+                raise ValueError("custom_unlock_windows must not be empty")
+            if any(w < 0 or w >= 130 for w in normalized):
+                raise ValueError("custom_unlock_windows must be within [0, 129]")
+            custom_unlock_windows = normalized
+
         now = int(time.time() * 1000)
         state = MatchState(
             match_id=uuid.uuid4().hex[:12],
@@ -58,6 +71,7 @@ class RoomService:
             raise ValueError("match full")
         player = {
             "player_id": uuid.uuid4().hex[:8],
+            "player_token": secrets.token_urlsafe(24),
             "name": player_name,
             "ready": False,
             "online": True,
@@ -67,7 +81,28 @@ class RoomService:
         state.now_ms = now_ms
         state.add_event(GameEvent(EVENT_PLAYER_JOINED, now_ms, {"seat": seat, "name": player_name}))
         self.repo.save_match(state)
-        return {"seat": seat, "player_id": player["player_id"], **player}
+        return {"seat": seat, "player_id": player["player_id"], "player_token": player["player_token"], **player}
+
+    def reconnect_match(self, match_id: str, player_id: str, player_token: str) -> dict:
+        state = self.repo.get_match(match_id)
+        if state is None:
+            raise ValueError("match not found")
+        now_ms = int(time.time() * 1000)
+        for seat, info in state.players.items():
+            if info.get("player_id") == player_id and info.get("player_token") == player_token:
+                info["online"] = True
+                state.now_ms = now_ms
+                self.repo.save_match(state)
+                return {
+                    "seat": seat,
+                    "player_id": info.get("player_id"),
+                    "player_token": info.get("player_token"),
+                    "name": info.get("name"),
+                    "ready": bool(info.get("ready", False)),
+                    "online": bool(info.get("online", False)),
+                    "is_host": bool(info.get("is_host", False)),
+                }
+        raise ValueError("player auth failed")
 
     def _reassign_host_if_needed(self, state: MatchState, now_ms: int) -> None:
         hosts = [s for s, info in state.players.items() if info.get("is_host")]

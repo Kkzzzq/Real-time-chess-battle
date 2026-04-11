@@ -1,149 +1,99 @@
-# Real-time Chess Battle (Realtime Xiangqi API)
+# Real-time Chess Battle
 
-纯后端实时中国象棋服务（FastAPI + WebSocket），**不内置 demo 页面**。
+现在仓库包含：
+- 后端（FastAPI + WebSocket）
+- 正式前端（React + TypeScript + Vite，目录 `frontend/`）
+- 示例脚本（`examples/`）
 
-## 快速开始
+## 1) 启动方式
 
+### 后端
 ```bash
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## 测试
+### 前端
+```bash
+cd frontend
+npm install
+cp .env.example .env
+npm run dev
+```
 
+默认联调地址：
+- API: `http://127.0.0.1:8000`
+- WS: `ws://127.0.0.1:8000`
+
+## 2) 前端功能落地
+
+`frontend/` 已提供：
+- 页面流：大厅 -> 房间 -> 对局
+- 棋盘组件：9x10 网格、棋子渲染、可行动作高亮
+- API Client：`matchApi / commandApi / queryApi`
+- WS Client：连接、心跳、断线重连、snapshot 消费
+- 状态管理（Zustand）：session / room / match / ws / ui
+- Session 持久化：本地保存 `player_id/player_token/match_id`
+- 前端测试（Vitest）：store + board 组件基础测试
+
+## 3) 身份与鉴权（已生效）
+
+`join` 会返回：
+- `player_id`
+- `player_token`
+
+之后：
+- `ready/leave/commands/state(viewer)/legal-moves(viewer)/ws` 都需要 `player_token`
+- 新增 `POST /matches/{match_id}/reconnect`，可恢复 `online=true`
+
+## 4) 房规与规则
+
+`POST /matches` 支持：
+- `ruleset_name`（当前只允许 `standard`）
+- `allow_draw`
+- `tick_ms`
+- `custom_unlock_windows`
+
+`custom_unlock_windows` 现已真实驱动：
+- phase wave 判定
+- unlock window 判定
+- auto unlock 判定
+- snapshot 中 next wave 计算
+
+## 5) API 语义更新
+
+- `legal-moves`:
+  - `static.targets` 始终返回
+  - `actionable` 仅在提供 viewer 身份时返回；否则为 `null`
+- `query_routes` 纯查询（不再隐式推进状态）
+- `command_routes` 仅执行命令（不再额外 reconcile）
+- running 状态推进由 `tick_loop` + `match_service.tick_once_with_events` 统一负责
+
+## 6) runtime_board 消费规则
+
+`runtime_board.cells[y][x]`：
+- `occupants`: 当前格全部占用者（moving 优先）
+- `primary_occupant`: 当前格主显示占用者（按 `moving` 优先 + `piece_id` 排序）
+
+前端推荐：
+- 交互合法性基于 API（`legal-moves`）
+- 主展示优先 `runtime_board` + `pieces.display_x/display_y`
+- 规则核对可查看 `board`
+
+## 7) 测试
+
+后端：
 ```bash
 pytest -q
 ```
 
-> 集成测试必须使用 `with TestClient(app) as client:` 触发 lifespan，避免 `app.state.container` 未初始化。
-
-## 示例入口（替代 demo）
-
-- `examples/create_join_start_flow.sh`：完整 HTTP 流程（create/join/ready/start/state/move）。
-- `examples/ws_client_example.py`：WebSocket 订阅 + ping + 命令回执示例。
-
-## 项目定位
-
-- 提供 HTTP API + WebSocket API。
-- 适用于前端、自动化脚本、机器人客户端接入。
-- 无前端页面；推荐通过 OpenAPI、curl、脚本和测试驱动联调。
-
-## 身份模型（必须先理解）
-
-- `player_id`：外部身份（HTTP/WS 命令与查询使用）。
-- `seat`：对局内座位（1/2），用于规则归属与 `piece.owner`。
-- `piece.owner` 使用 `seat`，不是 `player_id`。
-
-关系：`player_id -> seat -> piece.owner`。
-
-## Room / Player 生命周期
-
-### Room
-- `waiting`：可 `join/ready/start`。
-- `running`：tick loop 推进；`leave` 将玩家标记为 `offline`。
-- `ended`：允许查询，不允许重新 `join/start`。
-- `deleted`：无玩家时删除房间并停止 loop。
-
-### Player
-- `joined` -> `ready` -> `running` -> (`offline` | `left`)。
-- `offline` 当前版本不自动 reconnect（后续可扩展，以 `player_id` 为主键恢复）。
-
-## API 概览
-
-### Match
-- `POST /matches`（支持房规参数）
-- `GET /matches`
-- `POST /matches/{match_id}/join`
-- `POST /matches/{match_id}/ready`
-- `POST /matches/{match_id}/start`
-- `POST /matches/{match_id}/leave`
-
-`POST /matches` 请求体示例：
-
-```json
-{
-  "ruleset_name": "standard",
-  "allow_draw": true,
-  "tick_ms": 100,
-  "custom_unlock_windows": null
-}
+前端：
+```bash
+cd frontend
+npm test
 ```
 
-### Command（统一 `player_id`）
-- `POST /matches/{match_id}/commands/move`
-- `POST /matches/{match_id}/commands/unlock`
-- `POST /matches/{match_id}/commands/resign`
+## 8) 示例脚本与前端关系
 
-失败使用 HTTP 错误码：`400/403/404/409`。
-
-### Query（只读）
-- `GET /matches/{match_id}/state?player_id=...`
-- `GET /matches/{match_id}/phase`
-- `GET /matches/{match_id}/unlock-state`
-- `GET /matches/{match_id}/events`
-- `GET /matches/{match_id}/board`
-- `GET /matches/{match_id}/pieces/{piece_id}/legal-moves?player_id=...`
-- `GET /matches/{match_id}/players`
-
-## Snapshot 字段语义
-
-`/state` 返回 `MatchSnapshotResponse`，关键字段：
-
-- `match_meta.ruleset`：当前房规（`ruleset_name/allow_draw/tick_ms/custom_unlock_windows`）。
-- `players[seat]`：统一输出 `seat + player_id + online/ready/host`。
-- `phase`：含 `next_phase_*` 和 `next_wave_*`。
-- `unlock`：含窗口状态、波次、每方 `can_choose_now/waiting_for_timeout/choice_source`。
-- `board`：逻辑棋盘（按 `piece.x/y`）。
-- `runtime_board`：运行时占用棋盘（按 runtime occupancy）。
-- `pieces[*].commandability`：
-  - `owner_*` 永远可用（owner 视角）。
-  - 传 `player_id` 查询 `/state` 时会补 `viewer_*`（viewer 视角）。
-
-## board / runtime_board / display 坐标关系
-
-- `board`：逻辑落点棋盘，稳定用于规则核对。
-- `runtime_board`：运行时占用；每个 cell 是 `occupants` 列表 + `primary_occupant`。
-- `pieces.display_x/display_y`：连续显示坐标（浮点）。
-
-## legal-moves 语义
-
-返回结构分层：
-- `static.targets`：纯规则合法落点。
-- `actionable`：viewer 上下文相关结果：
-  - `viewer_seat`
-  - `actionable_targets`
-  - `executable`
-  - `actionable_context`
-  - `reason`
-
-不传 `player_id` 时：
-- 仍返回 `static.targets`。
-- `actionable_targets` 为空。
-- `actionable_context=provide_player_id_for_actionable_targets`。
-
-## WebSocket 协议
-
-- `WS /matches/{match_id}/ws`
-- `WS /ws/matches/{match_id}`（兼容）
-
-连接首帧：
-1. `subscribed`
-2. `snapshot`
-
-命令帧：
-- `move`: `{"type":"move","player_id":"...","piece_id":"...","target_x":4,"target_y":5}`
-- `unlock`: `{"type":"unlock","player_id":"...","kind":"horse"}`
-- `resign`: `{"type":"resign","player_id":"..."}`
-
-回执策略（固定）：
-- 命令直返：`command_result` + `events(delta)`。
-- `snapshot/event` 主通道来自 tick loop 广播。
-- 客户端需对 event/snapshot 做幂等处理。
-
-## version 语义
-
-`match_meta.version` 是 **event version**：
-- 仅当 `state.add_event()` 发生时增长。
-- 不是完整 snapshot version。
-- 诸如 `display_x`、剩余冷却、phase remaining 的连续变化不保证触发 version 增长。
-
+- `examples/` 仅用于后端调试/联调脚本
+- 正式产品交互请使用 `frontend/`

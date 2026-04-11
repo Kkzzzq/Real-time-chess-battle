@@ -1,0 +1,6 @@
+export type Seat = 1 | 2
+
+export interface PlayerJoin { seat: Seat; player_id: string; player_token: string; name: string; ready: boolean; online: boolean; is_host: boolean }
+export interface MatchCreated { match_id: string; status: string; ruleset: { ruleset_name: string; allow_draw: boolean; tick_ms: number; custom_unlock_windows?: number[] | null } }
+export interface MatchSnapshot { match_meta: { match_id: string; status: string; winner?: number | null; reason?: string | null; ruleset: Record<string, unknown> }; players: Record<string, { seat: number; player_id: string; name: string; ready: boolean; online: boolean; is_host: boolean }>; phase: { name: string; wave_index: number }; unlock: { window_open: boolean; wave_options: string[]; players: Record<string, { available_options: string[] }> }; board: { cells: Cell[][] }; runtime_board: { cells: Cell[][] }; pieces: Array<{ id: string; owner: number; kind: string; display_x: number; display_y: number; x: number; y: number; alive: boolean }>; events: Array<{ type: string; ts_ms: number; payload: Record<string, unknown> }> }
+export interface Cell { occupants: Array<{ piece_id: string; owner: number; kind: string; moving: boolean }>; primary_occupant: { piece_id: string; owner: number; kind: string; moving: boolean } | null }
