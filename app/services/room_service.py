@@ -21,6 +21,7 @@ from app.domain.player_state_machine import PlayerLifecycle, PlayerStateMachine
 from app.domain.room_state_machine import RoomStateMachine
 from app.engine.board_setup import create_standard_board
 from app.repository.base import MatchRepo
+from app.services.persistence_service import PersistenceService
 from app.services.player_session_service import PlayerSessionService
 
 logger = logging.getLogger(__name__)
@@ -28,9 +29,15 @@ TOKEN_TTL_SECONDS = int(os.getenv("PLAYER_TOKEN_TTL_SECONDS", "86400"))
 
 
 class RoomService:
-    def __init__(self, repo: MatchRepo, session_service: PlayerSessionService | None = None) -> None:
+    def __init__(
+        self,
+        repo: MatchRepo,
+        session_service: PlayerSessionService | None = None,
+        persistence_service: PersistenceService | None = None,
+    ) -> None:
         self.repo = repo
-        self.session_service = session_service or PlayerSessionService(TOKEN_TTL_SECONDS)
+        self.persistence_service = persistence_service
+        self.session_service = session_service or PlayerSessionService(TOKEN_TTL_SECONDS, persistence_service=persistence_service)
 
     def create_match(
         self,
@@ -64,7 +71,7 @@ class RoomService:
             custom_unlock_windows=custom_unlock_windows,
         )
         state.add_event(GameEvent(EVENT_MATCH_CREATED, now, {"match_id": state.match_id}))
-        self.repo.save_match(state)
+        self._persist(state)
         logger.info("audit action=create_match match_id=%s ruleset=%s", state.match_id, ruleset_name)
         return state
 
@@ -78,7 +85,7 @@ class RoomService:
         seat = 1 if 1 not in state.players else 2
         if seat in state.players:
             raise ValueError("match full")
-        issued = self.session_service.issue(now_ms=now_ms)
+        issued = self.session_service.issue_session(match_id=match_id, now_ms=now_ms)
         player = {
             "player_id": issued.player_id,
             "player_token": issued.player_token,
@@ -95,7 +102,9 @@ class RoomService:
             state.creator_player_id = player["player_id"]
         state.now_ms = now_ms
         state.add_event(GameEvent(EVENT_PLAYER_JOINED, now_ms, {"seat": seat, "name": player_name}))
-        self.repo.save_match(state)
+        self._persist(state)
+        if self.persistence_service is not None:
+            self.persistence_service.mark_online(match_id, player["player_id"])
         logger.info("audit action=join match_id=%s seat=%s player_id=%s", match_id, seat, player["player_id"])
         return self._build_player_join_payload(state, seat)
 
@@ -106,7 +115,9 @@ class RoomService:
         now_ms = int(time.time() * 1000)
         for seat, info in state.players.items():
             if info.get("player_id") == player_id and info.get("player_token") == player_token:
-                self.session_service.validate(
+                self.session_service.validate_session(
+                    match_id=match_id,
+                    player_id=player_id,
                     token=player_token,
                     expected_token=str(info.get("player_token", "")),
                     expires_at=info.get("player_token_expires_at"),
@@ -118,7 +129,9 @@ class RoomService:
                     info["lifecycle"] = PlayerLifecycle.RECONNECTED.value
                 info["online"] = True
                 state.now_ms = now_ms
-                self.repo.save_match(state)
+                self._persist(state)
+                if self.persistence_service is not None:
+                    self.persistence_service.mark_online(match_id, player_id)
                 logger.info("audit action=reconnect match_id=%s seat=%s player_id=%s", match_id, seat, player_id)
                 return self._build_player_join_payload(state, seat)
         raise ValueError("player auth failed")
@@ -152,6 +165,13 @@ class RoomService:
             "is_host": state.host_seat == seat,
         }
 
+
+    def _persist(self, state: MatchState) -> None:
+        if self.persistence_service is not None:
+            self.persistence_service.persist_match_state(state)
+        else:
+            self.repo.save_match(state)
+
     def leave_match(self, match_id: str, player_id: str) -> MatchState:
         state = self.repo.get_match(match_id)
         if not state:
@@ -170,12 +190,14 @@ class RoomService:
                 PlayerStateMachine.require_transition(lifecycle, PlayerLifecycle.OFFLINE)
                 info["online"] = False
                 info["lifecycle"] = PlayerLifecycle.OFFLINE.value
+                if self.persistence_service is not None:
+                    self.persistence_service.mark_offline(match_id, player_id)
                 state.add_event(GameEvent(EVENT_PLAYER_OFFLINE, now_ms, {"seat": seat, "player_id": player_id}))
             if not state.players:
                 self.repo.delete_match(match_id)
                 logger.info("audit action=leave_delete_room match_id=%s player_id=%s", match_id, player_id)
                 return state
-            self.repo.save_match(state)
+            self._persist(state)
             logger.info("audit action=leave match_id=%s seat=%s player_id=%s", match_id, seat, player_id)
             return state
         raise ValueError("player not in match")
@@ -194,7 +216,7 @@ class RoomService:
                 info["ready"] = True
                 info["lifecycle"] = PlayerLifecycle.READY.value
                 state.add_event(GameEvent(EVENT_PLAYER_READY, now_ms, {"seat": seat, "player_id": player_id}))
-                self.repo.save_match(state)
+                self._persist(state)
                 logger.info("audit action=ready match_id=%s seat=%s player_id=%s", match_id, seat, player_id)
                 return state
         raise ValueError("player not found")
@@ -234,6 +256,6 @@ class RoomService:
         state.last_action_at = now
         state.last_capture_at = now
         state.add_event(GameEvent(EVENT_MATCH_STARTED, now, {}))
-        self.repo.save_match(state)
+        self._persist(state)
         logger.info("audit action=start match_id=%s by_player_id=%s host_seat=%s", match_id, requester_player_id, state.host_seat)
         return state

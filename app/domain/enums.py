@@ -17,6 +17,7 @@ class MatchStatus(str, Enum):
     WAITING = "waiting"
     RUNNING = "running"
     ENDED = "ended"
+    DELETED = "deleted"
 
 
 ALL_PLAYERS = (1, 2)

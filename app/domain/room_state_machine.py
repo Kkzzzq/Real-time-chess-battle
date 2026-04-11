@@ -4,9 +4,10 @@ from app.domain.enums import MatchStatus
 
 
 _ALLOWED_ROOM_TRANSITIONS: dict[MatchStatus, set[MatchStatus]] = {
-    MatchStatus.WAITING: {MatchStatus.RUNNING},
+    MatchStatus.WAITING: {MatchStatus.RUNNING, MatchStatus.DELETED},
     MatchStatus.RUNNING: {MatchStatus.ENDED},
     MatchStatus.ENDED: set(),
+    MatchStatus.DELETED: set(),
 }
 
 

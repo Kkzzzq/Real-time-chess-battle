@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Any, Protocol
 
 from app.domain.models import MatchState
 
@@ -20,9 +20,9 @@ class MatchMetaRepo(Protocol):
 class RuntimeStateRepo(Protocol):
     """High-frequency runtime state storage abstraction (Redis target)."""
 
-    def save_runtime_state(self, state: MatchState) -> None: ...
+    def load_runtime_state(self, match_id: str) -> dict[str, Any] | None: ...
 
-    def get_runtime_state(self, match_id: str) -> MatchState | None: ...
+    def save_runtime_state(self, match_id: str, snapshot: dict[str, Any]) -> None: ...
 
     def delete_runtime_state(self, match_id: str) -> None: ...
 
@@ -30,13 +30,22 @@ class RuntimeStateRepo(Protocol):
 class EventRepo(Protocol):
     """Archiveable event store abstraction."""
 
-    def append_event(self, match_id: str, event_type: str, payload: dict) -> None: ...
+    def append_event(self, match_id: str, event: Any) -> None: ...
 
 
 class PlayerRepo(Protocol):
     """Player lifecycle data abstraction."""
 
-    def upsert_players(self, state: MatchState) -> None: ...
+    def sync_players_from_state(self, state: MatchState) -> None: ...
+
+class SessionRepo(Protocol):
+    """Session persistence abstraction (token metadata)."""
+
+    def upsert_session(self, *, player_id: str, match_id: str, token_value: str, issued_at_ms: int, expires_at_ms: int) -> None: ...
+
+    def get_session(self, player_id: str) -> Any | None: ...
+
+    def revoke_session(self, player_id: str) -> None: ...
 
 
 class MatchRepo(Protocol):

@@ -8,20 +8,19 @@ export type ViewerContext = {
 }
 
 export function clearExpiredSession(nowMs: number = Date.now()) {
-  const session = useSessionStore.getState().session
-  if (!session) return
-  if (session.tokenExpiresAt && nowMs > session.tokenExpiresAt) {
-    useSessionStore.getState().clearSession()
+  const state = useSessionStore.getState()
+  if (state.tokenExpiresAt && nowMs > state.tokenExpiresAt) {
+    state.clear()
   }
 }
 
 export function getCurrentViewerContext(): ViewerContext | null {
-  const session = useSessionStore.getState().session
-  if (!session) return null
+  const state = useSessionStore.getState()
+  if (!state.matchId || !state.playerId || !state.playerToken || !state.seat) return null
   return {
-    matchId: session.matchId,
-    seat: session.seat,
-    playerId: session.playerId,
-    playerToken: session.playerToken,
+    matchId: state.matchId,
+    seat: state.seat,
+    playerId: state.playerId,
+    playerToken: state.playerToken,
   }
 }

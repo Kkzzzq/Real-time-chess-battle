@@ -10,14 +10,22 @@ from app.engine.move_rules import validate_move
 from app.engine.phase import is_piece_kind_allowed_by_phase
 from app.engine.unlock_service import UnlockService
 from app.repository.base import MatchRepo
+from app.services.persistence_service import PersistenceService
 
 
 logger = logging.getLogger(__name__)
 
 
 class CommandService:
-    def __init__(self, repo: MatchRepo) -> None:
+    def __init__(self, repo: MatchRepo, persistence_service: PersistenceService | None = None) -> None:
         self.repo = repo
+        self.persistence_service = persistence_service
+
+    def _persist(self, state) -> None:
+        if self.persistence_service is not None:
+            self.persistence_service.persist_match_state(state)
+        else:
+            self.repo.save_match(state)
 
     def _append_command(self, state, payload: dict) -> None:
         state.command_log.append(payload)
@@ -68,7 +76,7 @@ class CommandService:
         )
         state.add_event(GameEvent(EVENT_MOVE_COMMAND_ACCEPTED, now_ms, {"piece_id": piece_id, "target": target}))
         state.add_event(GameEvent(EVENT_MOVE_STARTED, now_ms, {"piece_id": piece_id, "duration_ms": duration_ms}))
-        self.repo.save_match(state)
+        self._persist(state)
         logger.info("audit action=move match_id=%s player_id=%s seat=%s piece_id=%s target=%s", match_id, player_id, player, piece_id, target)
         return True, "ok"
 
@@ -85,7 +93,7 @@ class CommandService:
         ok, msg = UnlockService.choose_unlock(player, kind, state, now_ms)
         if ok:
             self._append_command(state, {"type": "unlock", "player": player, "player_id": player_id, "kind": kind.value, "ts": now_ms})
-            self.repo.save_match(state)
+            self._persist(state)
             logger.info("audit action=unlock match_id=%s player_id=%s seat=%s kind=%s", match_id, player_id, player, kind.value)
         return ok, msg
 
@@ -101,6 +109,6 @@ class CommandService:
         assert player is not None
         apply_resign(player, state, now_ms)
         self._append_command(state, {"type": "resign", "player": player, "player_id": player_id, "ts": now_ms})
-        self.repo.save_match(state)
+        self._persist(state)
         logger.info("audit action=resign match_id=%s player_id=%s seat=%s", match_id, player_id, player)
         return True, "ok"
