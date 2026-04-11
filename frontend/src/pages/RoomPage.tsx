@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { matchApi } from '../api/matchApi'
 import { queryApi } from '../api/queryApi'
@@ -6,6 +6,7 @@ import { useRoomStore } from '../store/roomStore'
 import { useSessionStore } from '../store/sessionStore'
 import { useUiStore } from '../store/uiStore'
 import { useMatchStore } from '../store/matchStore'
+import { useSessionBootstrap } from '../hooks/useSessionBootstrap'
 import { useMatchRealtime } from '../hooks/useMatchRealtime'
 import { StatusBanner } from '../components/layout/StatusBanner'
 import { useWsStore } from '../store/wsStore'
@@ -18,27 +19,24 @@ export function RoomPage() {
   const ui = useUiStore()
   const ws = useWsStore()
   const { snapshot } = useMatchStore()
-  const [loading, setLoading] = useState(true)
+
+  const bootstrap = useSessionBootstrap()
 
   useMatchRealtime(matchId, session.playerId, session.playerToken)
 
   const loadRoom = async () => {
-    if (!session.playerId || !session.playerToken) { navigate('/'); return }
-    setLoading(true)
+    room.setLoading(true)
+    room.setMatchId(matchId)
     try {
-      await matchApi.reconnect(matchId, session.playerId, session.playerToken)
-      session.setSession({ matchId })
+      const rec = await bootstrap(matchId)
+      if (!rec) return
       const st = await queryApi.state(matchId, session.playerId, session.playerToken)
       room.setPlayers(st.players as any)
       room.setStatus(st.match_meta.status)
       ui.setError(undefined)
       if (st.match_meta.status === 'running') navigate(`/game/${matchId}`)
-    } catch {
-      session.clear()
-      ui.setError('房间恢复失败，请重新加入')
-      navigate('/')
     } finally {
-      setLoading(false)
+      room.setLoading(false)
     }
   }
 
@@ -55,7 +53,7 @@ export function RoomPage() {
   const isHost = !!me?.is_host
 
   return <div><h2>房间 {matchId}</h2>
-    <StatusBanner loading={loading} error={ui.error} notice={ws.reconnecting ? '连接重试中...' : undefined} onRetry={loadRoom} />
+    <StatusBanner loading={room.loading} error={ui.error || room.roomError} notice={ws.reconnecting ? '连接重试中...' : undefined} onRetry={loadRoom} />
     <div>我是: seat {session.seat ?? '-'} {isHost ? '(Host)' : ''}</div>
     <button onClick={async()=>{ if(session.playerId&&session.playerToken){ await matchApi.ready(matchId,session.playerId,session.playerToken) }}}>Ready</button>
     <button disabled={!isHost} onClick={async()=>{ if(session.playerId&&session.playerToken){ const started = await matchApi.start(matchId, session.playerId, session.playerToken); if(started.status==='running') navigate(`/game/${matchId}`) } }}>Start</button>

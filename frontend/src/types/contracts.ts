@@ -15,5 +15,5 @@ export interface EventSchema { type: string; ts_ms: number; payload: Record<stri
 export interface CommandLogSchema { type: string; ts: number; player_id: string; player: number | null; piece_id: string | null; target: [number, number] | null; kind: string | null }
 export interface MatchSnapshot { match_meta: MatchMeta; players: Record<string, PlayerSchema>; phase: PhaseSchema; unlock: UnlockSchema; board: BoardSchema; runtime_board: BoardSchema; pieces: PieceSchema[]; events: EventSchema[]; command_log: CommandLogSchema[] }
 
-export interface PlayerJoin { seat: Seat; player_id: string; player_token: string; name: string; ready: boolean; online: boolean; is_host: boolean }
+export interface PlayerJoin { seat: Seat; player_id: string; player_token: string; player_token_expires_at?: number | null; name: string; ready: boolean; online: boolean; is_host: boolean }
 export interface MatchCreated { match_id: string; status: string; ruleset: MatchMeta['ruleset'] }

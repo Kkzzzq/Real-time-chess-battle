@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from app.domain.enums import MatchStatus, PieceType
 from app.domain.events import EVENT_MOVE_COMMAND_ACCEPTED, EVENT_MOVE_STARTED, GameEvent
 from app.engine import path_planner, timeline
@@ -8,6 +10,9 @@ from app.engine.move_rules import validate_move
 from app.engine.phase import is_piece_kind_allowed_by_phase
 from app.engine.unlock_service import UnlockService
 from app.repository.base import MatchRepo
+
+
+logger = logging.getLogger(__name__)
 
 
 class CommandService:
@@ -64,6 +69,7 @@ class CommandService:
         state.add_event(GameEvent(EVENT_MOVE_COMMAND_ACCEPTED, now_ms, {"piece_id": piece_id, "target": target}))
         state.add_event(GameEvent(EVENT_MOVE_STARTED, now_ms, {"piece_id": piece_id, "duration_ms": duration_ms}))
         self.repo.save_match(state)
+        logger.info("audit action=move match_id=%s player_id=%s seat=%s piece_id=%s target=%s", match_id, player_id, player, piece_id, target)
         return True, "ok"
 
     def handle_unlock_command(self, match_id: str, player_id: str, kind: PieceType, now_ms: int) -> tuple[bool, str]:
@@ -80,6 +86,7 @@ class CommandService:
         if ok:
             self._append_command(state, {"type": "unlock", "player": player, "player_id": player_id, "kind": kind.value, "ts": now_ms})
             self.repo.save_match(state)
+            logger.info("audit action=unlock match_id=%s player_id=%s seat=%s kind=%s", match_id, player_id, player, kind.value)
         return ok, msg
 
     def handle_resign_command(self, match_id: str, player_id: str, now_ms: int) -> tuple[bool, str]:
@@ -95,4 +102,5 @@ class CommandService:
         apply_resign(player, state, now_ms)
         self._append_command(state, {"type": "resign", "player": player, "player_id": player_id, "ts": now_ms})
         self.repo.save_match(state)
+        logger.info("audit action=resign match_id=%s player_id=%s seat=%s", match_id, player_id, player)
         return True, "ok"

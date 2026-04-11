@@ -137,6 +137,6 @@ def players(match_id: str, player_id: str = Query(...), player_token: str = Quer
             "name": info.get("name"),
             "ready": bool(info.get("ready", False)),
             "online": bool(info.get("online", False)),
-            "is_host": bool(info.get("is_host", False)),
+            "is_host": s.host_seat == seat,
         }
     return out

@@ -13,6 +13,7 @@
     "type:frontend": "npm --prefix frontend run typecheck",
     "lint:backend": "python -m py_compile app/**/*.py",
     "lint:frontend": "npm --prefix frontend run typecheck",
-    "e2e": "echo 'TODO: add playwright/cypress e2e'"
+    "e2e": "pytest -q tests/test_e2e_flow.py",
+    "contracts:export": "python scripts/export_openapi.py"
   }
 }

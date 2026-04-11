@@ -36,7 +36,7 @@ export function LobbyPage() {
     try {
       const created = await matchApi.createMatch()
       const joined = await matchApi.joinMatch(created.match_id, name)
-      session.setSession({ matchId: created.match_id, playerId: joined.player.player_id, playerToken: joined.player.player_token, seat: joined.player.seat, playerName: joined.player.name })
+      session.setSession({ matchId: created.match_id, playerId: joined.player.player_id, playerToken: joined.player.player_token, tokenExpiresAt: joined.player.player_token_expires_at || undefined, seat: joined.player.seat, playerName: joined.player.name })
       navigate(`/room/${created.match_id}`)
     } catch (e: any) {
       ui.setError(e.message)
@@ -47,7 +47,7 @@ export function LobbyPage() {
     try {
       if (!matchId) return
       const joined = await matchApi.joinMatch(matchId, name)
-      session.setSession({ matchId, playerId: joined.player.player_id, playerToken: joined.player.player_token, seat: joined.player.seat, playerName: joined.player.name })
+      session.setSession({ matchId, playerId: joined.player.player_id, playerToken: joined.player.player_token, tokenExpiresAt: joined.player.player_token_expires_at || undefined, seat: joined.player.seat, playerName: joined.player.name })
       navigate(`/room/${matchId}`)
     } catch (e: any) {
       ui.setError(e.message)

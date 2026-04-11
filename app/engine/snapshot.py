@@ -227,7 +227,7 @@ def _snapshot_players(state: MatchState) -> dict[str, dict]:
             "name": info.get("name"),
             "ready": bool(info.get("ready", False)),
             "online": bool(info.get("online", False)),
-            "is_host": bool(info.get("is_host", False)),
+            "is_host": state.host_seat == seat,
         }
     return players
 

@@ -236,6 +236,7 @@ class PlayerJoinResponse(BaseModel):
     seat: int
     player_id: str
     player_token: str
+    player_token_expires_at: int | None = None
     name: str
     ready: bool
     online: bool

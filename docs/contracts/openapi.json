@@ -1,0 +1,2524 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Realtime Xiangqi",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Ready",
+        "operationId": "ready_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Metrics",
+        "operationId": "metrics_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches": {
+      "get": {
+        "tags": [
+          "matches"
+        ],
+        "summary": "List Matches",
+        "operationId": "list_matches_matches_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "matches"
+        ],
+        "summary": "Create Match",
+        "operationId": "create_match_matches_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CreateMatchRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchCreatedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/join": {
+      "post": {
+        "tags": [
+          "matches"
+        ],
+        "summary": "Join Match",
+        "operationId": "join_match_matches__match_id__join_post",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinMatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinMatchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/reconnect": {
+      "post": {
+        "tags": [
+          "matches"
+        ],
+        "summary": "Reconnect Match",
+        "operationId": "reconnect_match_matches__match_id__reconnect_post",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconnectMatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconnectMatchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/ready": {
+      "post": {
+        "tags": [
+          "matches"
+        ],
+        "summary": "Ready Match",
+        "operationId": "ready_match_matches__match_id__ready_post",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadyMatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/start": {
+      "post": {
+        "tags": [
+          "matches"
+        ],
+        "summary": "Start Match",
+        "operationId": "start_match_matches__match_id__start_post",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartMatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartMatchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/leave": {
+      "post": {
+        "tags": [
+          "matches"
+        ],
+        "summary": "Leave Match",
+        "operationId": "leave_match_matches__match_id__leave_post",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeaveMatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/commands/move": {
+      "post": {
+        "tags": [
+          "commands"
+        ],
+        "summary": "Move",
+        "operationId": "move_matches__match_id__commands_move_post",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveCommandRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResultResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/commands/unlock": {
+      "post": {
+        "tags": [
+          "commands"
+        ],
+        "summary": "Unlock",
+        "operationId": "unlock_matches__match_id__commands_unlock_post",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnlockCommandRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResultResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/commands/resign": {
+      "post": {
+        "tags": [
+          "commands"
+        ],
+        "summary": "Resign",
+        "operationId": "resign_matches__match_id__commands_resign_post",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResultResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/state": {
+      "get": {
+        "tags": [
+          "query"
+        ],
+        "summary": "State",
+        "operationId": "state_matches__match_id__state_get",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Player Id"
+            }
+          },
+          {
+            "name": "player_token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Player Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchSnapshotResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/phase": {
+      "get": {
+        "tags": [
+          "query"
+        ],
+        "summary": "Phase",
+        "operationId": "phase_matches__match_id__phase_get",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Player Id"
+            }
+          },
+          {
+            "name": "player_token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Player Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/unlock-state": {
+      "get": {
+        "tags": [
+          "query"
+        ],
+        "summary": "Unlock State",
+        "operationId": "unlock_state_matches__match_id__unlock_state_get",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Player Id"
+            }
+          },
+          {
+            "name": "player_token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Player Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/events": {
+      "get": {
+        "tags": [
+          "query"
+        ],
+        "summary": "Events",
+        "operationId": "events_matches__match_id__events_get",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Player Id"
+            }
+          },
+          {
+            "name": "player_token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Player Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/board": {
+      "get": {
+        "tags": [
+          "query"
+        ],
+        "summary": "Board",
+        "operationId": "board_matches__match_id__board_get",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Player Id"
+            }
+          },
+          {
+            "name": "player_token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Player Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/pieces/{piece_id}/legal-moves": {
+      "get": {
+        "tags": [
+          "query"
+        ],
+        "summary": "Legal Moves",
+        "operationId": "legal_moves_matches__match_id__pieces__piece_id__legal_moves_get",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          },
+          {
+            "name": "piece_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Piece Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Player Id"
+            }
+          },
+          {
+            "name": "player_token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Player Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegalMovesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/players": {
+      "get": {
+        "tags": [
+          "query"
+        ],
+        "summary": "Players",
+        "operationId": "players_matches__match_id__players_get",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Player Id"
+            }
+          },
+          {
+            "name": "player_token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Player Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BoardCellSchema": {
+        "properties": {
+          "occupants": {
+            "items": {
+              "$ref": "#/components/schemas/BoardOccupantSchema"
+            },
+            "type": "array",
+            "title": "Occupants"
+          },
+          "primary_occupant": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BoardOccupantSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "occupants",
+          "primary_occupant"
+        ],
+        "title": "BoardCellSchema"
+      },
+      "BoardOccupantSchema": {
+        "properties": {
+          "piece_id": {
+            "type": "string",
+            "title": "Piece Id"
+          },
+          "owner": {
+            "type": "integer",
+            "title": "Owner"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "moving": {
+            "type": "boolean",
+            "title": "Moving"
+          }
+        },
+        "type": "object",
+        "required": [
+          "piece_id",
+          "owner",
+          "kind",
+          "moving"
+        ],
+        "title": "BoardOccupantSchema"
+      },
+      "BoardSchema": {
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "logical",
+              "runtime"
+            ],
+            "title": "Mode"
+          },
+          "cells": {
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/BoardCellSchema"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Cells"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/BoardStatsSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode",
+          "cells",
+          "stats"
+        ],
+        "title": "BoardSchema"
+      },
+      "BoardStatsSchema": {
+        "properties": {
+          "alive_total": {
+            "type": "integer",
+            "title": "Alive Total"
+          },
+          "alive_by_player": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Alive By Player"
+          }
+        },
+        "type": "object",
+        "required": [
+          "alive_total",
+          "alive_by_player"
+        ],
+        "title": "BoardStatsSchema"
+      },
+      "CommandLogSchema": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "ts": {
+            "type": "integer",
+            "title": "Ts"
+          },
+          "player_id": {
+            "type": "string",
+            "title": "Player Id"
+          },
+          "player": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Player"
+          },
+          "piece_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Piece Id"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "ts",
+          "player_id"
+        ],
+        "title": "CommandLogSchema"
+      },
+      "CommandResultResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/MatchSnapshotResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "message",
+          "snapshot"
+        ],
+        "title": "CommandResultResponse"
+      },
+      "CreateMatchRequest": {
+        "properties": {
+          "ruleset_name": {
+            "type": "string",
+            "title": "Ruleset Name",
+            "default": "standard"
+          },
+          "allow_draw": {
+            "type": "boolean",
+            "title": "Allow Draw",
+            "default": true
+          },
+          "tick_ms": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 20.0,
+            "title": "Tick Ms",
+            "default": 100
+          },
+          "custom_unlock_windows": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Unlock Windows"
+          }
+        },
+        "type": "object",
+        "title": "CreateMatchRequest"
+      },
+      "EventSchema": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "ts_ms": {
+            "type": "integer",
+            "title": "Ts Ms"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "ts_ms",
+          "payload"
+        ],
+        "title": "EventSchema"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "JoinMatchRequest": {
+        "properties": {
+          "player_name": {
+            "type": "string",
+            "title": "Player Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_name"
+        ],
+        "title": "JoinMatchRequest"
+      },
+      "JoinMatchResponse": {
+        "properties": {
+          "player": {
+            "$ref": "#/components/schemas/PlayerJoinResponse"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player",
+          "status"
+        ],
+        "title": "JoinMatchResponse"
+      },
+      "LeaveMatchRequest": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "title": "Player Id"
+          },
+          "player_token": {
+            "type": "string",
+            "title": "Player Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "player_token"
+        ],
+        "title": "LeaveMatchRequest"
+      },
+      "LegalMovesActionableSchema": {
+        "properties": {
+          "viewer_seat": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewer Seat"
+          },
+          "actionable_targets": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Actionable Targets"
+          },
+          "executable": {
+            "type": "boolean",
+            "title": "Executable"
+          },
+          "actionable_context": {
+            "type": "string",
+            "title": "Actionable Context"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "viewer_seat",
+          "actionable_targets",
+          "executable",
+          "actionable_context",
+          "reason"
+        ],
+        "title": "LegalMovesActionableSchema"
+      },
+      "LegalMovesResponse": {
+        "properties": {
+          "piece_id": {
+            "type": "string",
+            "title": "Piece Id"
+          },
+          "owner": {
+            "type": "integer",
+            "title": "Owner"
+          },
+          "player_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Player Id"
+          },
+          "static": {
+            "$ref": "#/components/schemas/LegalMovesStaticSchema"
+          },
+          "actionable": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LegalMovesActionableSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "piece_id",
+          "owner",
+          "player_id",
+          "static",
+          "actionable"
+        ],
+        "title": "LegalMovesResponse"
+      },
+      "LegalMovesStaticSchema": {
+        "properties": {
+          "targets": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Targets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "targets"
+        ],
+        "title": "LegalMovesStaticSchema"
+      },
+      "MatchCreatedResponse": {
+        "properties": {
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "ruleset": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Ruleset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_id",
+          "status",
+          "ruleset"
+        ],
+        "title": "MatchCreatedResponse"
+      },
+      "MatchMetaSchema": {
+        "properties": {
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "winner": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Winner"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "created_at": {
+            "type": "integer",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "now_ms": {
+            "type": "integer",
+            "title": "Now Ms"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "ruleset": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Ruleset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_id",
+          "status",
+          "winner",
+          "reason",
+          "created_at",
+          "started_at",
+          "now_ms",
+          "version",
+          "ruleset"
+        ],
+        "title": "MatchMetaSchema"
+      },
+      "MatchSnapshotResponse": {
+        "properties": {
+          "match_meta": {
+            "$ref": "#/components/schemas/MatchMetaSchema"
+          },
+          "players": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PlayerSchema"
+            },
+            "type": "object",
+            "title": "Players"
+          },
+          "phase": {
+            "$ref": "#/components/schemas/PhaseSchema"
+          },
+          "unlock": {
+            "$ref": "#/components/schemas/UnlockSchema"
+          },
+          "board": {
+            "$ref": "#/components/schemas/BoardSchema"
+          },
+          "runtime_board": {
+            "$ref": "#/components/schemas/BoardSchema"
+          },
+          "pieces": {
+            "items": {
+              "$ref": "#/components/schemas/PieceSchema"
+            },
+            "type": "array",
+            "title": "Pieces"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventSchema"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "command_log": {
+            "items": {
+              "$ref": "#/components/schemas/CommandLogSchema"
+            },
+            "type": "array",
+            "title": "Command Log"
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_meta",
+          "players",
+          "phase",
+          "unlock",
+          "board",
+          "runtime_board",
+          "pieces",
+          "events",
+          "command_log"
+        ],
+        "title": "MatchSnapshotResponse"
+      },
+      "MatchStatusResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "players": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/PlayerSchema"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Players"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "status"
+        ],
+        "title": "MatchStatusResponse"
+      },
+      "MoveCommandRequest": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "title": "Player Id"
+          },
+          "player_token": {
+            "type": "string",
+            "title": "Player Token"
+          },
+          "piece_id": {
+            "type": "string",
+            "title": "Piece Id"
+          },
+          "target_x": {
+            "type": "integer",
+            "title": "Target X"
+          },
+          "target_y": {
+            "type": "integer",
+            "title": "Target Y"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "player_token",
+          "piece_id",
+          "target_x",
+          "target_y"
+        ],
+        "title": "MoveCommandRequest"
+      },
+      "PhaseSchema": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "deadline_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline Ms"
+          },
+          "remaining_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining Ms"
+          },
+          "wave_index": {
+            "type": "integer",
+            "title": "Wave Index"
+          },
+          "next_phase_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Phase Name"
+          },
+          "next_phase_start_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Phase Start Ms"
+          },
+          "next_wave_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Wave Index"
+          },
+          "next_wave_start_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Wave Start Ms"
+          },
+          "current_wave_start_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Wave Start Ms"
+          },
+          "current_wave_deadline_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Wave Deadline Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "deadline_ms",
+          "remaining_ms",
+          "wave_index",
+          "next_phase_name",
+          "next_phase_start_ms",
+          "next_wave_index",
+          "next_wave_start_ms",
+          "current_wave_start_ms",
+          "current_wave_deadline_ms"
+        ],
+        "title": "PhaseSchema"
+      },
+      "PieceCommandabilitySchema": {
+        "properties": {
+          "owner_can_command": {
+            "type": "boolean",
+            "title": "Owner Can Command"
+          },
+          "owner_disabled_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Disabled Reason"
+          },
+          "viewer_can_command": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewer Can Command"
+          },
+          "viewer_disabled_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewer Disabled Reason"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "owner_can_command",
+          "owner_disabled_reason",
+          "note"
+        ],
+        "title": "PieceCommandabilitySchema"
+      },
+      "PieceSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "owner": {
+            "type": "integer",
+            "title": "Owner"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "x": {
+            "type": "integer",
+            "title": "X"
+          },
+          "y": {
+            "type": "integer",
+            "title": "Y"
+          },
+          "display_x": {
+            "type": "number",
+            "title": "Display X"
+          },
+          "display_y": {
+            "type": "number",
+            "title": "Display Y"
+          },
+          "alive": {
+            "type": "boolean",
+            "title": "Alive"
+          },
+          "is_moving": {
+            "type": "boolean",
+            "title": "Is Moving"
+          },
+          "target_x": {
+            "type": "integer",
+            "title": "Target X"
+          },
+          "target_y": {
+            "type": "integer",
+            "title": "Target Y"
+          },
+          "path": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Path"
+          },
+          "move_start_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Move Start At"
+          },
+          "move_end_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Move End At"
+          },
+          "move_remaining_ms": {
+            "type": "integer",
+            "title": "Move Remaining Ms"
+          },
+          "cooldown_remaining_ms": {
+            "type": "integer",
+            "title": "Cooldown Remaining Ms"
+          },
+          "can_command": {
+            "type": "boolean",
+            "title": "Can Command"
+          },
+          "disabled_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled Reason"
+          },
+          "can_command_scope": {
+            "type": "string",
+            "title": "Can Command Scope"
+          },
+          "commandability": {
+            "$ref": "#/components/schemas/PieceCommandabilitySchema"
+          },
+          "runtime_cells": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Runtime Cells"
+          },
+          "segment": {
+            "$ref": "#/components/schemas/PieceSegmentSchema"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "death_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Death Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "owner",
+          "kind",
+          "x",
+          "y",
+          "display_x",
+          "display_y",
+          "alive",
+          "is_moving",
+          "target_x",
+          "target_y",
+          "path",
+          "move_start_at",
+          "move_end_at",
+          "move_remaining_ms",
+          "cooldown_remaining_ms",
+          "can_command",
+          "disabled_reason",
+          "can_command_scope",
+          "commandability",
+          "runtime_cells",
+          "segment",
+          "captured_at",
+          "death_reason"
+        ],
+        "title": "PieceSchema"
+      },
+      "PieceSegmentSchema": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "start": {
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Start"
+          },
+          "end": {
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "End"
+          },
+          "local_progress": {
+            "type": "number",
+            "title": "Local Progress"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "start",
+          "end",
+          "local_progress"
+        ],
+        "title": "PieceSegmentSchema"
+      },
+      "PieceType": {
+        "type": "string",
+        "enum": [
+          "soldier",
+          "advisor",
+          "elephant",
+          "horse",
+          "cannon",
+          "chariot",
+          "general"
+        ],
+        "title": "PieceType"
+      },
+      "PlayerJoinResponse": {
+        "properties": {
+          "seat": {
+            "type": "integer",
+            "title": "Seat"
+          },
+          "player_id": {
+            "type": "string",
+            "title": "Player Id"
+          },
+          "player_token": {
+            "type": "string",
+            "title": "Player Token"
+          },
+          "player_token_expires_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Player Token Expires At"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "ready": {
+            "type": "boolean",
+            "title": "Ready"
+          },
+          "online": {
+            "type": "boolean",
+            "title": "Online"
+          },
+          "is_host": {
+            "type": "boolean",
+            "title": "Is Host"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seat",
+          "player_id",
+          "player_token",
+          "name",
+          "ready",
+          "online",
+          "is_host"
+        ],
+        "title": "PlayerJoinResponse"
+      },
+      "PlayerSchema": {
+        "properties": {
+          "seat": {
+            "type": "integer",
+            "title": "Seat"
+          },
+          "player_id": {
+            "type": "string",
+            "title": "Player Id"
+          },
+          "player_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Player Token"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "ready": {
+            "type": "boolean",
+            "title": "Ready"
+          },
+          "online": {
+            "type": "boolean",
+            "title": "Online"
+          },
+          "is_host": {
+            "type": "boolean",
+            "title": "Is Host"
+          }
+        },
+        "type": "object",
+        "required": [
+          "seat",
+          "player_id",
+          "name",
+          "ready",
+          "online",
+          "is_host"
+        ],
+        "title": "PlayerSchema"
+      },
+      "ReadyMatchRequest": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "title": "Player Id"
+          },
+          "player_token": {
+            "type": "string",
+            "title": "Player Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "player_token"
+        ],
+        "title": "ReadyMatchRequest"
+      },
+      "ReconnectMatchRequest": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "title": "Player Id"
+          },
+          "player_token": {
+            "type": "string",
+            "title": "Player Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "player_token"
+        ],
+        "title": "ReconnectMatchRequest"
+      },
+      "ReconnectMatchResponse": {
+        "properties": {
+          "player": {
+            "$ref": "#/components/schemas/PlayerJoinResponse"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player",
+          "status"
+        ],
+        "title": "ReconnectMatchResponse"
+      },
+      "ResignRequest": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "title": "Player Id"
+          },
+          "player_token": {
+            "type": "string",
+            "title": "Player Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "player_token"
+        ],
+        "title": "ResignRequest"
+      },
+      "StartMatchRequest": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "title": "Player Id"
+          },
+          "player_token": {
+            "type": "string",
+            "title": "Player Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "player_token"
+        ],
+        "title": "StartMatchRequest"
+      },
+      "StartMatchResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "started_at": {
+            "type": "integer",
+            "title": "Started At"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/MatchSnapshotResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "status",
+          "started_at",
+          "snapshot"
+        ],
+        "title": "StartMatchResponse"
+      },
+      "UnlockCommandRequest": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "title": "Player Id"
+          },
+          "player_token": {
+            "type": "string",
+            "title": "Player Token"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/PieceType"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "player_token",
+          "kind"
+        ],
+        "title": "UnlockCommandRequest"
+      },
+      "UnlockPlayerSchema": {
+        "properties": {
+          "unlocked": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unlocked"
+          },
+          "available_options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Available Options"
+          },
+          "wave_choice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wave Choice"
+          },
+          "has_chosen": {
+            "type": "boolean",
+            "title": "Has Chosen"
+          },
+          "auto_selected": {
+            "type": "boolean",
+            "title": "Auto Selected"
+          },
+          "can_choose_now": {
+            "type": "boolean",
+            "title": "Can Choose Now"
+          },
+          "waiting_for_timeout": {
+            "type": "boolean",
+            "title": "Waiting For Timeout"
+          },
+          "choice_source": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "auto",
+              "none"
+            ],
+            "title": "Choice Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "unlocked",
+          "available_options",
+          "wave_choice",
+          "has_chosen",
+          "auto_selected",
+          "can_choose_now",
+          "waiting_for_timeout",
+          "choice_source"
+        ],
+        "title": "UnlockPlayerSchema"
+      },
+      "UnlockSchema": {
+        "properties": {
+          "phase": {
+            "type": "string",
+            "title": "Phase"
+          },
+          "fully_unlocked": {
+            "type": "boolean",
+            "title": "Fully Unlocked"
+          },
+          "window_open": {
+            "type": "boolean",
+            "title": "Window Open"
+          },
+          "current_wave": {
+            "type": "integer",
+            "title": "Current Wave"
+          },
+          "wave_start_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wave Start Ms"
+          },
+          "wave_deadline_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wave Deadline Ms"
+          },
+          "current_wave_remaining_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Wave Remaining Ms"
+          },
+          "wave_timeout": {
+            "type": "boolean",
+            "title": "Wave Timeout"
+          },
+          "wave_options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Wave Options"
+          },
+          "next_wave_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Wave Index"
+          },
+          "next_wave_start_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Wave Start Ms"
+          },
+          "players": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/UnlockPlayerSchema"
+            },
+            "type": "object",
+            "title": "Players"
+          }
+        },
+        "type": "object",
+        "required": [
+          "phase",
+          "fully_unlocked",
+          "window_open",
+          "current_wave",
+          "wave_start_ms",
+          "wave_deadline_ms",
+          "current_wave_remaining_ms",
+          "wave_timeout",
+          "wave_options",
+          "next_wave_index",
+          "next_wave_start_ms",
+          "players"
+        ],
+        "title": "UnlockSchema"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

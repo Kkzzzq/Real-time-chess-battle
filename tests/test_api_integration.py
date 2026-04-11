@@ -88,3 +88,16 @@ def test_websocket_requires_auth_and_ping() -> None:
             ws.send_json({"type": "ping"})
             pong = ws.receive_json()
             assert pong["type"] == "pong"
+
+
+def test_reconnect_rejects_expired_token() -> None:
+    with TestClient(app) as client:
+        match_id = client.post("/matches").json()["match_id"]
+        p1 = client.post(f"/matches/{match_id}/join", json={"player_name": "A"}).json()["player"]
+        state = client.app.state.container.repo.get_match(match_id)
+        for info in state.players.values():
+            if info.get("player_id") == p1["player_id"]:
+                info["player_token_expires_at"] = 1
+        client.app.state.container.repo.save_match(state)
+        r = client.post(f"/matches/{match_id}/reconnect", json={"player_id": p1["player_id"], "player_token": p1["player_token"]})
+        assert r.status_code == 400

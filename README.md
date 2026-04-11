@@ -146,3 +146,26 @@ start 权限：
 - PickleRepo 非生产级持久化
 - `metrics` 当前为占位，未接入 Prometheus 指标
 - E2E 任务脚本已预留，待接入 Playwright/Cypress
+
+
+## Host 定义
+
+- `MatchState.host_seat` 是房间级唯一 host 来源。
+- `players[*].is_host` 为投影视图，由 `host_seat` 计算得出。
+
+## 前端 WS 连接策略
+
+- 当前前端是**单 active match 连接**策略（单例 ws client）。
+- 页面切换会主动断开旧连接再连接新 match。
+- 多标签同时打开同一账号不保证连接一致性。
+
+## 合同同步
+
+- 可执行 `npm run contracts:export` 生成 `docs/contracts/openapi.json`。
+- 当前前端仍是手工类型为主，后续可基于该 OpenAPI 做代码生成。
+
+## 部署
+
+- 后端镜像：`Dockerfile.backend`
+- 前端镜像：`Dockerfile.frontend`
+- 本地一体化：`docker-compose.dev.yml`
