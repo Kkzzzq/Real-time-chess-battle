@@ -2,11 +2,7 @@ from __future__ import annotations
 
 
 def runtime_state_key(match_id: str) -> str:
-<<<<<<< HEAD
     return f"rtcb:match:{match_id}:runtime"
-=======
-    return f"rtcb:match:{match_id}:state"
->>>>>>> origin/main
 
 
 def presence_key(match_id: str) -> str:

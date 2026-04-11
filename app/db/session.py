@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-<<<<<<< HEAD
 from collections.abc import Iterator
 
 from sqlalchemy import create_engine
@@ -37,16 +36,3 @@ def get_db() -> Iterator[Session]:
         yield db
     finally:
         db.close()
-=======
-from dataclasses import dataclass
-
-
-@dataclass(frozen=True)
-class DBSettings:
-    dsn: str
-
-
-def get_db_settings() -> DBSettings:
-    dsn = os.getenv("MYSQL_DSN", "mysql+pymysql://root:root@localhost:3306/rtcb")
-    return DBSettings(dsn=dsn)
->>>>>>> origin/main

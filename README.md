@@ -2,7 +2,6 @@
 
 后端（FastAPI + WebSocket）+ 前端（React + Vite）单仓。
 
-<<<<<<< HEAD
 ## 当前状态（2026-04-11）
 
 - Backend 测试：`pytest` 全绿。
@@ -11,7 +10,6 @@
 - Browser E2E：已接入 Playwright 配置与真实 spec 文件；当前环境未安装 playwright 二进制。
 
 ## 正式存储架构（已落地代码路径）
-=======
 ## 1) 当前成熟度与真实状态（2026-04-11）
 
 - Backend 测试：仓库内可运行并作为当前质量基线。
@@ -26,7 +24,6 @@
 - `host` 的单一来源是 `host_seat + host_player_id`。
 
 ## 3) 快速启动
->>>>>>> origin/main
 
 > **MySQL 存主数据，Redis 存实时状态。**
 
@@ -80,7 +77,6 @@ npm run e2e
 
 ## 环境变量（新增）
 
-<<<<<<< HEAD
 - `MYSQL_ENABLED=1|0`
 - `MYSQL_DSN`
 - `MYSQL_POOL_SIZE`
@@ -90,7 +86,6 @@ npm run e2e
 - `PLAYER_TOKEN_TTL_SECONDS`
 
 ## 现有开发后端
-=======
 ## 4) 正式存储架构目标：MySQL + Redis
 
 当前默认运行仍是 `memory/pickle`，但代码结构已新增 MySQL/Redis 模块骨架，目标架构固定为：
@@ -134,14 +129,11 @@ npm run e2e
 - 根 `package.json` 新增：`contracts:generate`、`e2e`、`e2e:headed`。
 
 ## 6) 现有 Repo 后端（开发模式）
->>>>>>> origin/main
 
 - `MATCH_REPO_BACKEND=memory`（默认）
 - `MATCH_REPO_BACKEND=pickle`
 
-<<<<<<< HEAD
 > 当 `MYSQL_ENABLED/REDIS_ENABLED` 关闭时，系统保持现有 memory/pickle 路径可运行。
-=======
 > `PickleRepo` 仅适合开发，不是生产级并发存储。
 
 ## 7) 观测与运维
@@ -160,4 +152,3 @@ npm run e2e
 6. 生成式契约替换手工 `contracts.ts`。
 7. Playwright E2E 真正可运行并接入 CI。
 8. metrics/audit/deploy 文档与实现继续完善。
->>>>>>> origin/main

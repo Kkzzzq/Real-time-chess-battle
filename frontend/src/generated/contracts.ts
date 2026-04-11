@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /* eslint-disable */
 // Generated from docs/contracts/openapi.json
 
@@ -15,7 +14,7 @@ export type BoardOccupantSchema = {
 }
 
 export type BoardSchema = {
-  mode: string;
+  mode: "logical" | "runtime";
   cells: BoardCellSchema[][];
   stats: BoardStatsSchema;
 }
@@ -191,7 +190,7 @@ export type PieceSegmentSchema = {
   local_progress: number;
 }
 
-export type PieceType = string
+export type PieceType = "soldier" | "advisor" | "elephant" | "horse" | "cannon" | "chariot" | "general"
 
 export type PlayerJoinResponse = {
   seat: number;
@@ -260,7 +259,7 @@ export type UnlockPlayerSchema = {
   auto_selected: boolean;
   can_choose_now: boolean;
   waiting_for_timeout: boolean;
-  choice_source: string;
+  choice_source: "manual" | "auto" | "none";
 }
 
 export type UnlockSchema = {
@@ -284,14 +283,4 @@ export type ValidationError = {
   type: string;
   input?: unknown;
   ctx?: Record<string, unknown>;
-=======
-/* Auto-generated placeholder.
- * Source: docs/contracts/openapi.json
- * Replace this script with openapi-typescript/openapi-generator in CI when npm registry is available.
- */
-
-export type OpenAPISchema = {
-  openapi: string
-  info?: { title?: string; version?: string }
->>>>>>> origin/main
 }

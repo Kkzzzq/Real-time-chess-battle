@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-<<<<<<< HEAD
 from sqlalchemy import BigInteger, Boolean, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -57,37 +56,3 @@ class PlayerSessionRecord(Base):
     token_value: Mapped[str] = mapped_column(String(256), nullable=False)
     issued_at_ms: Mapped[int] = mapped_column(BigInteger, nullable=False)
     expires_at_ms: Mapped[int] = mapped_column(BigInteger, nullable=False)
-=======
-from dataclasses import dataclass
-
-
-@dataclass
-class MatchRecord:
-    match_id: str
-    status: str
-    ruleset_name: str
-
-
-@dataclass
-class PlayerRecord:
-    player_id: str
-    match_id: str
-    seat: int
-    is_host: bool
-
-
-@dataclass
-class MatchEventRecord:
-    match_id: str
-    event_type: str
-    ts_ms: int
-    payload_json: str
-
-
-@dataclass
-class PlayerSessionRecord:
-    player_id: str
-    match_id: str
-    token_hash: str
-    expires_at_ms: int
->>>>>>> origin/main
