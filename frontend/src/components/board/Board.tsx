@@ -6,9 +6,10 @@ type Props = {
   actionableTargets: [number, number][]
   onCellClick: (x: number, y: number) => void
   onPieceClick: (pieceId: string) => void
+  showRuntimeDebug?: boolean
 }
 
-export function Board({ snapshot, selectedPieceId, actionableTargets, onCellClick, onPieceClick }: Props) {
+export function Board({ snapshot, selectedPieceId, actionableTargets, onCellClick, onPieceClick, showRuntimeDebug = false }: Props) {
   const runtimeCells = snapshot?.runtime_board.cells
   const pieces = snapshot?.pieces.filter((p) => p.alive) || []
   const isTarget = (x: number, y: number) => actionableTargets.some(([tx, ty]) => tx === x && ty === y)
@@ -45,6 +46,7 @@ export function Board({ snapshot, selectedPieceId, actionableTargets, onCellClic
                 title={multi ? `occupants=${cell?.occupants.length}` : ''}
               >
                 {primary ? `${primary.owner === 1 ? '红' : '黑'}${primary.kind}` : ''}
+                {multi ? <div style={{ fontSize: 10, color: '#cf1322' }}>+{(cell?.occupants.length || 1) - 1}</div> : null}
               </button>
             )
           })
@@ -82,6 +84,11 @@ export function Board({ snapshot, selectedPieceId, actionableTargets, onCellClic
           )
         })}
       </div>
+      {showRuntimeDebug ? (
+        <pre style={{ position: 'absolute', right: 0, bottom: 0, width: 220, maxHeight: 140, overflow: 'auto', margin: 0, background: 'rgba(0,0,0,0.55)', color: '#fff', fontSize: 10 }}>
+          {JSON.stringify(snapshot?.runtime_board?.stats || {}, null, 2)}
+        </pre>
+      ) : null}
     </div>
   )
 }

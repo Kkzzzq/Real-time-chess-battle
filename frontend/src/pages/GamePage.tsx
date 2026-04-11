@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { queryApi } from '../api/queryApi'
 import { useMatchStore } from '../store/matchStore'
 import { useSessionStore } from '../store/sessionStore'
 import { useUiStore } from '../store/uiStore'
@@ -9,7 +8,6 @@ import { ConnectionStatus } from '../components/layout/ConnectionStatus'
 import { useMatchRealtime } from '../hooks/useMatchRealtime'
 import { UnlockPanel } from '../components/layout/UnlockPanel'
 import { StatusBanner } from '../components/layout/StatusBanner'
-import { useSessionBootstrap } from '../hooks/useSessionBootstrap'
 import { PhasePanel } from '../components/layout/PhasePanel'
 import { EventsPanel } from '../components/layout/EventsPanel'
 import { ResultPanel } from '../components/layout/ResultPanel'
@@ -18,12 +16,11 @@ import { useGameController } from '../hooks/useGameController'
 
 export function GamePage() {
   const { matchId = '' } = useParams()
-  const { snapshot, setSnapshot, recentEvents, commandResult } = useMatchStore()
+  const { snapshot, recentEvents, commandResult } = useMatchStore()
   const session = useSessionStore()
   const ui = useUiStore()
   const [loading, setLoading] = useState(true)
   const [unlockLoading, setUnlockLoading] = useState(false)
-  const bootstrap = useSessionBootstrap()
   const controller = useGameController(matchId, session.playerId, session.playerToken)
 
   useMatchRealtime(matchId, session.playerId, session.playerToken)
@@ -31,11 +28,7 @@ export function GamePage() {
   const loadInitial = async () => {
     setLoading(true)
     try {
-      const rec = await bootstrap(matchId)
-      if (!rec) return
-      const st = await queryApi.state(matchId, session.playerId!, session.playerToken!)
-      setSnapshot(st)
-      ui.setError(undefined)
+      await controller.loadInitial()
     } finally {
       setLoading(false)
     }
@@ -43,7 +36,7 @@ export function GamePage() {
 
   useEffect(() => { loadInitial() }, [matchId, session.playerId, session.playerToken])
 
-  const ended = snapshot?.match_meta.status === 'ended'
+  const ended = controller.ended
 
   return (
     <div>
@@ -71,21 +64,25 @@ export function GamePage() {
       />
 
       <button disabled={ended} onClick={async () => { if (confirm('确认认输?')) await controller.resign() }}>Resign</button>
-      <Board
-        snapshot={snapshot}
-        selectedPieceId={ui.selectedPieceId}
-        actionableTargets={ui.actionableTargets}
-        onCellClick={async (x, y) => { if (!ended) await controller.moveTo(x, y) }}
-        onPieceClick={async (pieceId) => {
-          if (ended) return
-          const piece = snapshot?.pieces.find((p) => p.id === pieceId)
-          if (!piece || piece.commandability.viewer_can_command === false) {
-            ui.setError(piece?.commandability.viewer_disabled_reason || '当前棋子不可操作')
-            return
-          }
-          await controller.selectPiece(pieceId)
-        }}
-      />
+      <div style={{ position: 'relative', display: 'inline-block' }}>
+        <Board
+          snapshot={snapshot}
+          selectedPieceId={ui.selectedPieceId}
+          actionableTargets={ui.actionableTargets}
+          showRuntimeDebug={false}
+          onCellClick={async (x, y) => { if (!ended) await controller.moveTo(x, y) }}
+          onPieceClick={async (pieceId) => {
+            if (ended) return
+            const piece = snapshot?.pieces.find((p) => p.id === pieceId)
+            if (!piece || piece.commandability.viewer_can_command === false) {
+              ui.setError(piece?.commandability.viewer_disabled_reason || '当前棋子不可操作')
+              return
+            }
+            await controller.selectPiece(pieceId)
+          }}
+        />
+        {ended ? <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)', pointerEvents: 'all' }} /> : null}
+      </div>
 
       <div style={{ marginTop: 8 }}>Command Result: {commandResult ? `${String(commandResult.ok)} ${commandResult.message}` : '-'}</div>
       <EventsPanel events={recentEvents} />

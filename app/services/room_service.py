@@ -26,6 +26,10 @@ logger = logging.getLogger(__name__)
 TOKEN_TTL_SECONDS = int(os.getenv("PLAYER_TOKEN_TTL_SECONDS", "86400"))
 
 
+logger = logging.getLogger(__name__)
+TOKEN_TTL_SECONDS = int(os.getenv("PLAYER_TOKEN_TTL_SECONDS", "86400"))
+
+
 TOKEN_TTL_SECONDS = int(os.getenv("PLAYER_TOKEN_TTL_SECONDS", "86400"))
 
 class RoomService:
@@ -90,12 +94,13 @@ class RoomService:
         state.players[seat] = player
         if state.host_seat is None:
             state.host_seat = seat
+            state.host_player_id = player["player_id"]
             state.creator_player_id = player["player_id"]
         state.now_ms = now_ms
         state.add_event(GameEvent(EVENT_PLAYER_JOINED, now_ms, {"seat": seat, "name": player_name}))
         self.repo.save_match(state)
         logger.info("audit action=join match_id=%s seat=%s player_id=%s", match_id, seat, player["player_id"])
-        return {"seat": seat, "player_id": player["player_id"], "player_token": player["player_token"], "player_token_expires_at": expires_at, **player}
+        return self._build_player_join_payload(state, seat)
 
     def reconnect_match(self, match_id: str, player_id: str, player_token: str) -> dict:
         state = self.repo.get_match(match_id)
@@ -111,28 +116,37 @@ class RoomService:
                 state.now_ms = now_ms
                 self.repo.save_match(state)
                 logger.info("audit action=reconnect match_id=%s seat=%s player_id=%s", match_id, seat, player_id)
-                return {
-                    "seat": seat,
-                    "player_id": info.get("player_id"),
-                    "player_token": info.get("player_token"),
-                    "player_token_expires_at": info.get("player_token_expires_at"),
-                    "name": info.get("name"),
-                    "ready": bool(info.get("ready", False)),
-                    "online": bool(info.get("online", False)),
-                    "is_host": state.host_seat == seat,
-                }
+                return self._build_player_join_payload(state, seat)
         raise ValueError("player auth failed")
 
     def _reassign_host_if_needed(self, state: MatchState, now_ms: int) -> None:
         if state.host_seat in state.players:
+            state.host_player_id = state.players[state.host_seat].get("player_id")
             return
         if not state.players:
             state.host_seat = None
+            state.host_player_id = None
             return
         new_host = sorted(state.players.keys())[0]
         state.host_seat = new_host
+        state.host_player_id = state.players[new_host].get("player_id")
         state.add_event(GameEvent(EVENT_HOST_CHANGED, now_ms, {"seat": new_host}))
         logger.info("audit action=host_changed match_id=%s new_host_seat=%s", state.match_id, new_host)
+
+    def _build_player_join_payload(self, state: MatchState, seat: int) -> dict:
+        info = state.players.get(seat)
+        if not info:
+            raise ValueError("player not found")
+        return {
+            "seat": seat,
+            "player_id": info.get("player_id"),
+            "player_token": info.get("player_token"),
+            "player_token_expires_at": info.get("player_token_expires_at"),
+            "name": info.get("name"),
+            "ready": bool(info.get("ready", False)),
+            "online": bool(info.get("online", False)),
+            "is_host": state.host_seat == seat,
+        }
 
     def leave_match(self, match_id: str, player_id: str) -> MatchState:
         state = self.repo.get_match(match_id)

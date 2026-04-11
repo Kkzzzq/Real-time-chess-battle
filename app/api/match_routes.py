@@ -26,14 +26,18 @@ router = APIRouter(prefix="/matches", tags=["matches"])
 
 def _public_players(state) -> dict[str, dict]:
     players = {}
+    effective_host_player_id = state.host_player_id
+    if effective_host_player_id is None and state.host_seat in state.players:
+        effective_host_player_id = state.players[state.host_seat].get("player_id")
     for seat, info in state.players.items():
+        player_id = info.get("player_id")
         players[str(seat)] = {
             "seat": seat,
-            "player_id": info.get("player_id"),
+            "player_id": player_id,
             "name": info.get("name"),
             "ready": bool(info.get("ready", False)),
             "online": bool(info.get("online", False)),
-            "is_host": state.host_seat == seat,
+            "is_host": (state.host_seat == seat) or (effective_host_player_id is not None and player_id == effective_host_player_id),
         }
     return players
 

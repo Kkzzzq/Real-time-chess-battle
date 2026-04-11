@@ -1,0 +1,29 @@
+version: '3.9'
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    restart: unless-stopped
+    environment:
+      - MATCH_REPO_BACKEND=pickle
+      - MATCH_REPO_PICKLE_PATH=/data/matches.pkl
+      - PLAYER_TOKEN_TTL_SECONDS=86400
+      - ALLOWED_ORIGINS=https://your-frontend.example.com
+    volumes:
+      - backend_data:/data
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  backend_data:

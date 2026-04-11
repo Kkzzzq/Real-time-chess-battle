@@ -130,13 +130,17 @@ def legal_moves(
 def players(match_id: str, player_id: str = Query(...), player_token: str = Query(...), container=Depends(get_container)):
     s = _get_state_or_404(container, match_id)
     _require_viewer(s, player_id, player_token)
+    effective_host_player_id = s.host_player_id
+    if effective_host_player_id is None and s.host_seat in s.players:
+        effective_host_player_id = s.players[s.host_seat].get("player_id")
     out = {}
     for seat, info in s.players.items():
+        public_player_id = info.get("player_id")
         out[str(seat)] = {
             "seat": seat,
             "name": info.get("name"),
             "ready": bool(info.get("ready", False)),
             "online": bool(info.get("online", False)),
-            "is_host": s.host_seat == seat,
+            "is_host": (s.host_seat == seat) or (effective_host_player_id is not None and public_player_id == effective_host_player_id),
         }
     return out

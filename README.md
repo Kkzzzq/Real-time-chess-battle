@@ -1,26 +1,23 @@
 # Real-time Chess Battle
 
-后端（FastAPI + WS）+ 前端（React + Vite）的一体化仓库。
+后端（FastAPI + WebSocket）+ 前端（React + Vite）的单仓项目。
 
-## 架构
+## 1) 当前项目边界（先看）
 
-- `app/`: 后端 API、引擎、服务、仓储
-- `frontend/`: 前端页面、状态、WS 客户端
-- `tests/`: 后端测试
+- 当前仅支持 **2 名玩家对局**。
+- `query` / `commands` / `ws` 均要求 `player_id + player_token`，**不支持匿名 spectator**。
+- 前端 WebSocket 采用 **single active-match client** 策略：同一前端实例一次只维护一个房间连接。
+- `host` 的单一来源是房间级字段：`host_seat` + `host_player_id`（`is_host` 为投影视图）。
 
-状态推进模型：
-- `running` 状态由 `tick_loop` 驱动
-- API 路由不负责额外推进时钟
+## 2) 快速启动
 
-## 快速启动
-
-### 后端
+### Backend
 ```bash
 pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 前端
+### Frontend
 ```bash
 cd frontend
 npm install
@@ -29,143 +26,101 @@ npm run dev
 ```
 
 前端路由：
-- `/`
-- `/room/:matchId`
-- `/game/:matchId`
+- `/` Lobby
+- `/room/:matchId` 房间等待页
+- `/game/:matchId` 对局页
 
-## 身份模型（重要）
+## 3) 身份与会话
 
-当前使用**对局级凭证**，不是账号系统：
-- `player_id`
-- `player_token`（有过期时间，默认 24h）
+- `POST /matches/{id}/join` 返回 `player_id + player_token + player_token_expires_at`。
+- `POST /matches/{id}/reconnect` 使用同一凭证恢复。
+- token TTL 由 `PLAYER_TOKEN_TTL_SECONDS` 控制（默认 86400 秒）。
+- 前端 `sessionStore` 会在 hydrate 时清理本地过期 token；`useSessionBootstrap` 会将 reconnect 返回的完整玩家信息回写 session。
 
-### token 生命周期
-- `PLAYER_TOKEN_TTL_SECONDS` 可配置
-- token 过期后，`state/query/command/reconnect/ws` 会失败
+## 4) 房间与 host 规则
 
-## 安全与权限边界
+- 首位入房玩家成为 host。
+- 只有 host 可以 start。
+- host 离开 waiting 房间时，host 自动转移给当前最小 seat，并同步 `host_player_id`。
+- `players[*].is_host` 总是由房间级 host 字段计算。
 
-当前版本**不支持匿名观战**：
-- `state/phase/unlock-state/events/board/players/legal-moves` 全部要求 `player_id + player_token`
-- WS 连接必须带 `player_id + player_token`
+## 5) WebSocket 协议职责
 
-WS 命令授权策略：
-- 握手时校验 token
-- 命令帧只带 `player_id`
-- 服务端要求帧内 `player_id` 与连接身份一致
+- `subscribed`: 订阅成功元信息。
+- `snapshot`: 全量状态快照。
+- `events`: 增量事件批量。
+- `event`: 增量事件单条。
+- `command_result`: 命令执行结果。
+- `pong`: 心跳响应。
 
-## 房间流程
+前端 store 约定：
+- `snapshot` 负责全量覆盖。
+- `events/event` 负责增量事件流；和 snapshot 内事件做去重合并。
 
-1. Lobby: create/join
-2. Room: reconnect -> waiting -> ready/start
-3. Game: reconnect -> ws 持续更新 -> ended 结算
+## 6) 棋盘显示策略
 
-start 权限：
-- `POST /matches/{id}/start` 现在必须带 `player_id/player_token`
-- 且仅 host 可调用
+前端消费三层信息：
+- `board`：逻辑占位棋盘（落子格）。
+- `runtime_board`：运行时占位棋盘（移动中的路径占位）。
+- `pieces.display_x/display_y`：棋子动画 overlay。
 
-## 核心 API
+多占用格：
+- 主显示 `primary_occupant`。
+- 若 `occupants.length > 1`，格子会显示额外 `+N` 标识。
 
-- `POST /matches`
-- `POST /matches/{id}/join`
-- `POST /matches/{id}/reconnect`
-- `POST /matches/{id}/ready`
-- `POST /matches/{id}/start`
-- `POST /matches/{id}/leave`
-- `POST /matches/{id}/commands/move|unlock|resign`
-- `GET /matches/{id}/state|phase|unlock-state|events|board|players`
+## 7) 运维接口与成熟度
 
-### 系统运维接口
 - `GET /health`
 - `GET /ready`
-- `GET /metrics`（占位）
+- `GET /metrics`：当前为 JSON 简易指标（`matches_total` / `matches_running` / `ws_active_matches` / `ws_active_connections`），**不是 Prometheus 格式**。
 
-## 房规说明
-
-`POST /matches` 参数：
-- `ruleset_name`（当前仅 `standard`）
-- `allow_draw`
-- `tick_ms`
-- `custom_unlock_windows`
-
-`custom_unlock_windows` 约束：
-- 当前仅允许 `[50, 129]`
-- 以保证不与 sealed/soldier_only 固定阶段冲突
-
-## 前端实现要点
-
-- RoomPage：WS + reconnect + 状态同步
-- GamePage：WS 为主，HTTP 仅初始化
-- Board：
-  - 背景使用 `runtime_board`
-  - 棋子 overlay 使用 `display_x/display_y`
-  - 已修复“选中后点击敌子应走吃子逻辑”
-- Unlock：独立 `UnlockPanel` 组件
-- Events：WS `event/events` + snapshot 合并去重
-
-## CORS
-
-通过 `ALLOWED_ORIGINS` 配置（逗号分隔），默认仅本地开发域名。
-
-## 仓储与持久化
+## 8) Repo 与持久化
 
 - `MATCH_REPO_BACKEND=memory`（默认）
-- `MATCH_REPO_BACKEND=pickle`（本地样本持久化）
-  - `MATCH_REPO_PICKLE_PATH` 可配置
+- `MATCH_REPO_BACKEND=pickle`
+  - `MATCH_REPO_PICKLE_PATH` 控制文件路径
 
-> PickleRepo 仅适合单机开发/样本，非生产级分布式持久化方案。
+> PickleRepo 仅适合单机开发，不是生产级并发存储方案。
 
-## 日志与异常
+## 9) 部署
 
-- HTTP 请求日志：路径、方法、状态、耗时
-- WS 连接/断开日志
-- 全局异常处理返回统一 500
+- `Dockerfile.backend`
+- `Dockerfile.frontend`
+- `docker-compose.dev.yml`：本地开发
+- `docker-compose.prod.yml`：生产示例（包含后端数据卷与基础环境变量）
 
-## 工程脚本
+## 10) 环境变量
+
+### Backend
+- `ALLOWED_ORIGINS`：逗号分隔 CORS 白名单。
+- `MATCH_REPO_BACKEND`：`memory` / `pickle`。
+- `MATCH_REPO_PICKLE_PATH`：pickle 文件路径。
+- `PLAYER_TOKEN_TTL_SECONDS`：对局 token TTL。
+
+### Frontend
+- `VITE_API_BASE_URL`
+- `VITE_WS_BASE_URL`
+
+## 11) 工程脚本
 
 根目录：
-- `dev:backend`
-- `dev:frontend`
-- `dev:all`
-- `test:backend`
-- `test:frontend`
-- `test:all`
-- `lint:backend`
-- `lint:frontend`
-- `build:all`
+- `npm run test:backend`
+- `npm run contracts:export`
+- `npm run dev:all`
 
-## CI
+前端：
+- `npm --prefix frontend run typecheck`
+- `npm --prefix frontend run test`
+- `npm --prefix frontend run build`
 
-`.github/workflows/ci.yml`：
-- backend: py_compile + pytest
-- frontend: typecheck + test + build
+## 12) 合同同步
 
-## 已知限制
+- `python scripts/export_openapi.py` 导出 `docs/contracts/openapi.json`。
+- 当前 `frontend/src/types/contracts.ts` 仍有手工类型；后续可切换为 OpenAPI 生成。
 
-- 当前认证为对局级凭证，不是账号系统
-- PickleRepo 非生产级持久化
-- `metrics` 当前为占位，未接入 Prometheus 指标
-- E2E 任务脚本已预留，待接入 Playwright/Cypress
+## 13) 已知限制
 
-
-## Host 定义
-
-- `MatchState.host_seat` 是房间级唯一 host 来源。
-- `players[*].is_host` 为投影视图，由 `host_seat` 计算得出。
-
-## 前端 WS 连接策略
-
-- 当前前端是**单 active match 连接**策略（单例 ws client）。
-- 页面切换会主动断开旧连接再连接新 match。
-- 多标签同时打开同一账号不保证连接一致性。
-
-## 合同同步
-
-- 可执行 `npm run contracts:export` 生成 `docs/contracts/openapi.json`。
-- 当前前端仍是手工类型为主，后续可基于该 OpenAPI 做代码生成。
-
-## 部署
-
-- 后端镜像：`Dockerfile.backend`
-- 前端镜像：`Dockerfile.frontend`
-- 本地一体化：`docker-compose.dev.yml`
+- 无账号系统（仅对局级 token）。
+- 无 spectator。
+- WS 前端单活动连接策略不保证多标签一致性。
+- `/metrics` 仍是轻量 JSON，不是完整监控体系。

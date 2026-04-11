@@ -15,7 +15,7 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python -m py_compile app/**/*.py
       - run: pytest -q
-      - run: pytest -q tests/test_e2e_flow.py
+      - run: pytest -q tests/test_backend_flow.py
 
   frontend:
     runs-on: ubuntu-latest
@@ -27,7 +27,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm ci
+      - run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
       - run: npm run typecheck
       - run: npm test
       - run: npm run build

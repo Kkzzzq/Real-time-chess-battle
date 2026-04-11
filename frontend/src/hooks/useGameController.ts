@@ -1,9 +1,24 @@
 import { commandApi } from '../api/commandApi'
 import { queryApi } from '../api/queryApi'
+import { useMatchStore } from '../store/matchStore'
 import { useUiStore } from '../store/uiStore'
+import { useSessionBootstrap } from './useSessionBootstrap'
 
 export function useGameController(matchId: string, playerId?: string, playerToken?: string) {
   const ui = useUiStore()
+  const { setSnapshot, snapshot } = useMatchStore()
+  const bootstrap = useSessionBootstrap()
+
+  const ended = snapshot?.match_meta.status === 'ended'
+
+  const loadInitial = async () => {
+    const rec = await bootstrap(matchId)
+    if (!rec.success) return false
+    const st = await queryApi.state(matchId, rec.restored.player.player_id, rec.restored.player.player_token)
+    setSnapshot(st)
+    ui.setError(undefined)
+    return true
+  }
 
   const selectPiece = async (pieceId: string) => {
     if (!playerId || !playerToken) return
@@ -27,5 +42,5 @@ export function useGameController(matchId: string, playerId?: string, playerToke
     await commandApi.resign(matchId, { player_id: playerId, player_token: playerToken })
   }
 
-  return { selectPiece, moveTo, unlock, resign }
+  return { loadInitial, ended, selectPiece, moveTo, unlock, resign }
 }
