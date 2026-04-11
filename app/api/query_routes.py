@@ -57,6 +57,12 @@ def unlock_state(match_id: str, container=Depends(get_container)):
     return build_unlock_snapshot(s, now_ms)
 
 
+@router.get("/unlock-state")
+def unlock_state(match_id: str, container=Depends(get_container)):
+    s = _get_state_or_404(container, match_id)
+    return build_unlock_snapshot(s, int(time.time() * 1000))
+
+
 @router.get("/events")
 def events(match_id: str, container=Depends(get_container)):
     now_ms = int(time.time() * 1000)
