@@ -4,6 +4,7 @@ import time
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from app.api.auth import resolve_viewer_seat_with_auth
 from app.api.deps import get_container
 from app.api.schemas import LegalMovesResponse, MatchSnapshotResponse
 from app.domain.enums import MatchStatus
@@ -21,61 +22,67 @@ def _get_state_or_404(container, match_id: str):
     return s
 
 
-def _seat_by_player_id(state, player_id: str) -> int | None:
-    for seat, info in state.players.items():
-        if info.get("player_id") == player_id or info.get("id") == player_id:
-            return seat
-    return None
+def _require_viewer(state, player_id: str, player_token: str) -> int:
+    seat = resolve_viewer_seat_with_auth(state, player_id, player_token)
+    if seat is None:
+        raise HTTPException(401, "player auth required")
+    return seat
 
 
 @router.get("/state", response_model=MatchSnapshotResponse)
-def state(match_id: str, player_id: str | None = Query(default=None), container=Depends(get_container)):
+def state(match_id: str, player_id: str = Query(...), player_token: str = Query(...), container=Depends(get_container)):
     now_ms = int(time.time() * 1000)
     s = _get_state_or_404(container, match_id)
-    viewer_seat = _seat_by_player_id(s, player_id) if player_id else None
-    if player_id is not None and viewer_seat is None:
-        raise HTTPException(404, "player not found")
+    viewer_seat = _require_viewer(s, player_id, player_token)
     return build_match_snapshot(s, now_ms, viewer_seat=viewer_seat)
 
 
 @router.get("/phase")
-def phase(match_id: str, container=Depends(get_container)):
+def phase(match_id: str, player_id: str = Query(...), player_token: str = Query(...), container=Depends(get_container)):
     now_ms = int(time.time() * 1000)
     s = _get_state_or_404(container, match_id)
+    _require_viewer(s, player_id, player_token)
     return build_match_snapshot(s, now_ms)["phase"]
 
 
 @router.get("/unlock-state")
-def unlock_state(match_id: str, container=Depends(get_container)):
+def unlock_state(match_id: str, player_id: str = Query(...), player_token: str = Query(...), container=Depends(get_container)):
     now_ms = int(time.time() * 1000)
     s = _get_state_or_404(container, match_id)
+    _require_viewer(s, player_id, player_token)
     return build_unlock_snapshot(s, now_ms)
 
 
 @router.get("/events")
-def events(match_id: str, container=Depends(get_container)):
+def events(match_id: str, player_id: str = Query(...), player_token: str = Query(...), container=Depends(get_container)):
     s = _get_state_or_404(container, match_id)
+    _require_viewer(s, player_id, player_token)
     return [{"type": e.event_type, "ts_ms": e.ts_ms, "payload": e.payload} for e in s.event_log]
 
 
 @router.get("/board")
-def board(match_id: str, container=Depends(get_container)):
+def board(match_id: str, player_id: str = Query(...), player_token: str = Query(...), container=Depends(get_container)):
     now_ms = int(time.time() * 1000)
     s = _get_state_or_404(container, match_id)
+    _require_viewer(s, player_id, player_token)
     return {"board": build_board_snapshot(s, now_ms), "runtime_board": build_board_snapshot(s, now_ms, runtime=True)}
 
 
 @router.get("/pieces/{piece_id}/legal-moves", response_model=LegalMovesResponse)
-def legal_moves(match_id: str, piece_id: str, player_id: str | None = Query(default=None), container=Depends(get_container)):
+def legal_moves(
+    match_id: str,
+    piece_id: str,
+    player_id: str = Query(...),
+    player_token: str = Query(...),
+    container=Depends(get_container),
+):
     now_ms = int(time.time() * 1000)
     s = _get_state_or_404(container, match_id)
     if piece_id not in s.pieces:
         raise HTTPException(404, "piece not found")
 
     piece = s.pieces[piece_id]
-    viewer_seat = _seat_by_player_id(s, player_id) if player_id is not None else None
-    if player_id is not None and viewer_seat is None:
-        raise HTTPException(404, "player not found")
+    viewer_seat = _require_viewer(s, player_id, player_token)
 
     static_targets = list_legal_targets(piece, s, now_ms)
     actionable_targets: list[tuple[int, int]] = []
@@ -88,28 +95,21 @@ def legal_moves(match_id: str, piece_id: str, player_id: str | None = Query(defa
         and is_piece_kind_allowed_by_phase(piece.owner, piece.kind, s, now_ms)
         and piece.kind in s.unlocked_by_player.get(piece.owner, set())
     )
-    if player_id is not None and viewer_seat == piece.owner and owner_view_executable:
+    if viewer_seat == piece.owner and owner_view_executable:
         for target in static_targets:
             ok, _ = validate_move(piece, target, s, now_ms)
             if ok:
                 actionable_targets.append(target)
 
     executable = len(actionable_targets) > 0
-    if player_id is None:
-        reason = "viewer_context_missing"
-        actionable_context = "provide_player_id_for_actionable_targets"
-    elif viewer_seat != piece.owner:
+    if viewer_seat != piece.owner:
         reason = "not_piece_owner"
-        actionable_context = "viewer_context_provided"
     elif not owner_view_executable:
         reason = "piece_not_commandable_now"
-        actionable_context = "viewer_context_provided"
     elif not executable:
         reason = "no_actionable_targets"
-        actionable_context = "viewer_context_provided"
     else:
         reason = None
-        actionable_context = "viewer_context_provided"
 
     return {
         "piece_id": piece_id,
@@ -120,20 +120,20 @@ def legal_moves(match_id: str, piece_id: str, player_id: str | None = Query(defa
             "viewer_seat": viewer_seat,
             "actionable_targets": actionable_targets,
             "executable": executable,
-            "actionable_context": actionable_context,
+            "actionable_context": "viewer_context_provided",
             "reason": reason,
         },
     }
 
 
 @router.get("/players")
-def players(match_id: str, container=Depends(get_container)):
+def players(match_id: str, player_id: str = Query(...), player_token: str = Query(...), container=Depends(get_container)):
     s = _get_state_or_404(container, match_id)
+    _require_viewer(s, player_id, player_token)
     out = {}
     for seat, info in s.players.items():
         out[str(seat)] = {
             "seat": seat,
-            "player_id": info.get("player_id"),
             "name": info.get("name"),
             "ready": bool(info.get("ready", False)),
             "online": bool(info.get("online", False)),

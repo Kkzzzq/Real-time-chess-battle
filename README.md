@@ -1,149 +1,148 @@
-# Real-time Chess Battle (Realtime Xiangqi API)
+# Real-time Chess Battle
 
-纯后端实时中国象棋服务（FastAPI + WebSocket），**不内置 demo 页面**。
+后端（FastAPI + WS）+ 前端（React + Vite）的一体化仓库。
 
-## 快速开始
+## 架构
 
+- `app/`: 后端 API、引擎、服务、仓储
+- `frontend/`: 前端页面、状态、WS 客户端
+- `tests/`: 后端测试
+
+状态推进模型：
+- `running` 状态由 `tick_loop` 驱动
+- API 路由不负责额外推进时钟
+
+## 快速启动
+
+### 后端
 ```bash
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## 测试
-
+### 前端
 ```bash
-pytest -q
+cd frontend
+npm install
+cp .env.example .env
+npm run dev
 ```
 
-> 集成测试必须使用 `with TestClient(app) as client:` 触发 lifespan，避免 `app.state.container` 未初始化。
+前端路由：
+- `/`
+- `/room/:matchId`
+- `/game/:matchId`
 
-## 示例入口（替代 demo）
+## 身份模型（重要）
 
-- `examples/create_join_start_flow.sh`：完整 HTTP 流程（create/join/ready/start/state/move）。
-- `examples/ws_client_example.py`：WebSocket 订阅 + ping + 命令回执示例。
+当前使用**对局级凭证**，不是账号系统：
+- `player_id`
+- `player_token`（有过期时间，默认 24h）
 
-## 项目定位
+### token 生命周期
+- `PLAYER_TOKEN_TTL_SECONDS` 可配置
+- token 过期后，`state/query/command/reconnect/ws` 会失败
 
-- 提供 HTTP API + WebSocket API。
-- 适用于前端、自动化脚本、机器人客户端接入。
-- 无前端页面；推荐通过 OpenAPI、curl、脚本和测试驱动联调。
+## 安全与权限边界
 
-## 身份模型（必须先理解）
+当前版本**不支持匿名观战**：
+- `state/phase/unlock-state/events/board/players/legal-moves` 全部要求 `player_id + player_token`
+- WS 连接必须带 `player_id + player_token`
 
-- `player_id`：外部身份（HTTP/WS 命令与查询使用）。
-- `seat`：对局内座位（1/2），用于规则归属与 `piece.owner`。
-- `piece.owner` 使用 `seat`，不是 `player_id`。
+WS 命令授权策略：
+- 握手时校验 token
+- 命令帧只带 `player_id`
+- 服务端要求帧内 `player_id` 与连接身份一致
 
-关系：`player_id -> seat -> piece.owner`。
+## 房间流程
 
-## Room / Player 生命周期
+1. Lobby: create/join
+2. Room: reconnect -> waiting -> ready/start
+3. Game: reconnect -> ws 持续更新 -> ended 结算
 
-### Room
-- `waiting`：可 `join/ready/start`。
-- `running`：tick loop 推进；`leave` 将玩家标记为 `offline`。
-- `ended`：允许查询，不允许重新 `join/start`。
-- `deleted`：无玩家时删除房间并停止 loop。
+start 权限：
+- `POST /matches/{id}/start` 现在必须带 `player_id/player_token`
+- 且仅 host 可调用
 
-### Player
-- `joined` -> `ready` -> `running` -> (`offline` | `left`)。
-- `offline` 当前版本不自动 reconnect（后续可扩展，以 `player_id` 为主键恢复）。
+## 核心 API
 
-## API 概览
+- `POST /matches`
+- `POST /matches/{id}/join`
+- `POST /matches/{id}/reconnect`
+- `POST /matches/{id}/ready`
+- `POST /matches/{id}/start`
+- `POST /matches/{id}/leave`
+- `POST /matches/{id}/commands/move|unlock|resign`
+- `GET /matches/{id}/state|phase|unlock-state|events|board|players`
 
-### Match
-- `POST /matches`（支持房规参数）
-- `GET /matches`
-- `POST /matches/{match_id}/join`
-- `POST /matches/{match_id}/ready`
-- `POST /matches/{match_id}/start`
-- `POST /matches/{match_id}/leave`
+### 系统运维接口
+- `GET /health`
+- `GET /ready`
+- `GET /metrics`（占位）
 
-`POST /matches` 请求体示例：
+## 房规说明
 
-```json
-{
-  "ruleset_name": "standard",
-  "allow_draw": true,
-  "tick_ms": 100,
-  "custom_unlock_windows": null
-}
-```
+`POST /matches` 参数：
+- `ruleset_name`（当前仅 `standard`）
+- `allow_draw`
+- `tick_ms`
+- `custom_unlock_windows`
 
-### Command（统一 `player_id`）
-- `POST /matches/{match_id}/commands/move`
-- `POST /matches/{match_id}/commands/unlock`
-- `POST /matches/{match_id}/commands/resign`
+`custom_unlock_windows` 约束：
+- 当前仅允许 `[50, 129]`
+- 以保证不与 sealed/soldier_only 固定阶段冲突
 
-失败使用 HTTP 错误码：`400/403/404/409`。
+## 前端实现要点
 
-### Query（只读）
-- `GET /matches/{match_id}/state?player_id=...`
-- `GET /matches/{match_id}/phase`
-- `GET /matches/{match_id}/unlock-state`
-- `GET /matches/{match_id}/events`
-- `GET /matches/{match_id}/board`
-- `GET /matches/{match_id}/pieces/{piece_id}/legal-moves?player_id=...`
-- `GET /matches/{match_id}/players`
+- RoomPage：WS + reconnect + 状态同步
+- GamePage：WS 为主，HTTP 仅初始化
+- Board：
+  - 背景使用 `runtime_board`
+  - 棋子 overlay 使用 `display_x/display_y`
+  - 已修复“选中后点击敌子应走吃子逻辑”
+- Unlock：独立 `UnlockPanel` 组件
+- Events：WS `event/events` + snapshot 合并去重
 
-## Snapshot 字段语义
+## CORS
 
-`/state` 返回 `MatchSnapshotResponse`，关键字段：
+通过 `ALLOWED_ORIGINS` 配置（逗号分隔），默认仅本地开发域名。
 
-- `match_meta.ruleset`：当前房规（`ruleset_name/allow_draw/tick_ms/custom_unlock_windows`）。
-- `players[seat]`：统一输出 `seat + player_id + online/ready/host`。
-- `phase`：含 `next_phase_*` 和 `next_wave_*`。
-- `unlock`：含窗口状态、波次、每方 `can_choose_now/waiting_for_timeout/choice_source`。
-- `board`：逻辑棋盘（按 `piece.x/y`）。
-- `runtime_board`：运行时占用棋盘（按 runtime occupancy）。
-- `pieces[*].commandability`：
-  - `owner_*` 永远可用（owner 视角）。
-  - 传 `player_id` 查询 `/state` 时会补 `viewer_*`（viewer 视角）。
+## 仓储与持久化
 
-## board / runtime_board / display 坐标关系
+- `MATCH_REPO_BACKEND=memory`（默认）
+- `MATCH_REPO_BACKEND=pickle`（本地样本持久化）
+  - `MATCH_REPO_PICKLE_PATH` 可配置
 
-- `board`：逻辑落点棋盘，稳定用于规则核对。
-- `runtime_board`：运行时占用；每个 cell 是 `occupants` 列表 + `primary_occupant`。
-- `pieces.display_x/display_y`：连续显示坐标（浮点）。
+> PickleRepo 仅适合单机开发/样本，非生产级分布式持久化方案。
 
-## legal-moves 语义
+## 日志与异常
 
-返回结构分层：
-- `static.targets`：纯规则合法落点。
-- `actionable`：viewer 上下文相关结果：
-  - `viewer_seat`
-  - `actionable_targets`
-  - `executable`
-  - `actionable_context`
-  - `reason`
+- HTTP 请求日志：路径、方法、状态、耗时
+- WS 连接/断开日志
+- 全局异常处理返回统一 500
 
-不传 `player_id` 时：
-- 仍返回 `static.targets`。
-- `actionable_targets` 为空。
-- `actionable_context=provide_player_id_for_actionable_targets`。
+## 工程脚本
 
-## WebSocket 协议
+根目录：
+- `dev:backend`
+- `dev:frontend`
+- `dev:all`
+- `test:backend`
+- `test:frontend`
+- `test:all`
+- `lint:backend`
+- `lint:frontend`
+- `build:all`
 
-- `WS /matches/{match_id}/ws`
-- `WS /ws/matches/{match_id}`（兼容）
+## CI
 
-连接首帧：
-1. `subscribed`
-2. `snapshot`
+`.github/workflows/ci.yml`：
+- backend: py_compile + pytest
+- frontend: typecheck + test + build
 
-命令帧：
-- `move`: `{"type":"move","player_id":"...","piece_id":"...","target_x":4,"target_y":5}`
-- `unlock`: `{"type":"unlock","player_id":"...","kind":"horse"}`
-- `resign`: `{"type":"resign","player_id":"..."}`
+## 已知限制
 
-回执策略（固定）：
-- 命令直返：`command_result` + `events(delta)`。
-- `snapshot/event` 主通道来自 tick loop 广播。
-- 客户端需对 event/snapshot 做幂等处理。
-
-## version 语义
-
-`match_meta.version` 是 **event version**：
-- 仅当 `state.add_event()` 发生时增长。
-- 不是完整 snapshot version。
-- 诸如 `display_x`、剩余冷却、phase remaining 的连续变化不保证触发 version 增长。
-
+- 当前认证为对局级凭证，不是账号系统
+- PickleRepo 非生产级持久化
+- `metrics` 当前为占位，未接入 Prometheus 指标
+- E2E 任务脚本已预留，待接入 Playwright/Cypress

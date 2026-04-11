@@ -7,11 +7,11 @@ from app.engine.endgame import apply_resign
 from app.engine.move_rules import validate_move
 from app.engine.phase import is_piece_kind_allowed_by_phase
 from app.engine.unlock_service import UnlockService
-from app.repository.memory_repo import MemoryRepo
+from app.repository.base import MatchRepo
 
 
 class CommandService:
-    def __init__(self, repo: MemoryRepo) -> None:
+    def __init__(self, repo: MatchRepo) -> None:
         self.repo = repo
 
     def _append_command(self, state, payload: dict) -> None:

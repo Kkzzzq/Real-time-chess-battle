@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import secrets
 import time
 import uuid
 
@@ -16,11 +18,13 @@ from app.domain.events import (
 )
 from app.domain.models import MatchState
 from app.engine.board_setup import create_standard_board
-from app.repository.memory_repo import MemoryRepo
+from app.repository.base import MatchRepo
 
+
+TOKEN_TTL_SECONDS = int(os.getenv("PLAYER_TOKEN_TTL_SECONDS", "86400"))
 
 class RoomService:
-    def __init__(self, repo: MemoryRepo) -> None:
+    def __init__(self, repo: MatchRepo) -> None:
         self.repo = repo
 
     def create_match(
@@ -30,6 +34,18 @@ class RoomService:
         tick_ms: int = 100,
         custom_unlock_windows: list[int] | None = None,
     ) -> MatchState:
+        if ruleset_name != "standard":
+            raise ValueError("unsupported ruleset_name, only 'standard' is currently supported")
+        if custom_unlock_windows is not None:
+            normalized = sorted(set(custom_unlock_windows))
+            if len(normalized) != len(custom_unlock_windows):
+                raise ValueError("custom_unlock_windows must not contain duplicates")
+            if len(normalized) == 0:
+                raise ValueError("custom_unlock_windows must not be empty")
+            if any(w < 50 or w >= 130 for w in normalized):
+                raise ValueError("custom_unlock_windows must be within [50, 129]")
+            custom_unlock_windows = normalized
+
         now = int(time.time() * 1000)
         state = MatchState(
             match_id=uuid.uuid4().hex[:12],
@@ -56,8 +72,11 @@ class RoomService:
         seat = 1 if 1 not in state.players else 2
         if seat in state.players:
             raise ValueError("match full")
+        expires_at = now_ms + TOKEN_TTL_SECONDS * 1000
         player = {
             "player_id": uuid.uuid4().hex[:8],
+            "player_token": secrets.token_urlsafe(24),
+            "player_token_expires_at": expires_at,
             "name": player_name,
             "ready": False,
             "online": True,
@@ -67,7 +86,31 @@ class RoomService:
         state.now_ms = now_ms
         state.add_event(GameEvent(EVENT_PLAYER_JOINED, now_ms, {"seat": seat, "name": player_name}))
         self.repo.save_match(state)
-        return {"seat": seat, "player_id": player["player_id"], **player}
+        return {"seat": seat, "player_id": player["player_id"], "player_token": player["player_token"], **player}
+
+    def reconnect_match(self, match_id: str, player_id: str, player_token: str) -> dict:
+        state = self.repo.get_match(match_id)
+        if state is None:
+            raise ValueError("match not found")
+        now_ms = int(time.time() * 1000)
+        for seat, info in state.players.items():
+            if info.get("player_id") == player_id and info.get("player_token") == player_token:
+                exp = info.get("player_token_expires_at")
+                if exp is not None and now_ms > int(exp):
+                    raise ValueError("player token expired")
+                info["online"] = True
+                state.now_ms = now_ms
+                self.repo.save_match(state)
+                return {
+                    "seat": seat,
+                    "player_id": info.get("player_id"),
+                    "player_token": info.get("player_token"),
+                    "name": info.get("name"),
+                    "ready": bool(info.get("ready", False)),
+                    "online": bool(info.get("online", False)),
+                    "is_host": bool(info.get("is_host", False)),
+                }
+        raise ValueError("player auth failed")
 
     def _reassign_host_if_needed(self, state: MatchState, now_ms: int) -> None:
         hosts = [s for s, info in state.players.items() if info.get("is_host")]
@@ -119,10 +162,21 @@ class RoomService:
                 return state
         raise ValueError("player not found")
 
-    def start_match(self, match_id: str) -> MatchState:
+    def start_match(self, match_id: str, requester_player_id: str) -> MatchState:
         state = self.repo.get_match(match_id)
         if not state:
             raise ValueError("match not found")
+        requester_seat = None
+        for seat, info in state.players.items():
+            if info.get("player_id") == requester_player_id:
+                requester_seat = seat
+                if not info.get("online", True):
+                    raise ValueError("player offline")
+                if not info.get("is_host", False):
+                    raise ValueError("only host can start")
+                break
+        if requester_seat is None:
+            raise ValueError("player not found")
         if state.status == MatchStatus.RUNNING:
             raise ValueError("match already running")
         if state.status == MatchStatus.ENDED:

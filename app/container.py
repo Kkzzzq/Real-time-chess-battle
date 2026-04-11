@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 
+from app.repository.base import MatchRepo
 from app.repository.memory_repo import MemoryRepo
+from app.repository.pickle_repo import PickleRepo
 from app.runtime.broadcaster import Broadcaster
 from app.runtime.tick_loop import TickLoop
 from app.services.command_service import CommandService
@@ -12,13 +15,7 @@ from app.services.room_service import RoomService
 
 @dataclass
 class AppContainer:
-    """Application wiring container.
-
-    This object is the single place responsible for constructing and connecting
-    repositories, services, and runtime components.
-    """
-
-    repo: MemoryRepo
+    repo: MatchRepo
     room_service: RoomService
     command_service: CommandService
     match_service: MatchService
@@ -26,8 +23,15 @@ class AppContainer:
     tick_loop: TickLoop
 
 
+def _build_repo() -> MatchRepo:
+    backend = os.getenv('MATCH_REPO_BACKEND', 'memory').lower()
+    if backend == 'pickle':
+        return PickleRepo(path=os.getenv('MATCH_REPO_PICKLE_PATH', '.data/matches.pkl'))
+    return MemoryRepo()
+
+
 def build_container() -> AppContainer:
-    repo = MemoryRepo()
+    repo = _build_repo()
     room_service = RoomService(repo)
     command_service = CommandService(repo)
     match_service = MatchService(repo)

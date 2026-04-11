@@ -28,7 +28,7 @@ class UnlockService:
 
     @staticmethod
     def get_current_unlock_options(player: int, state: MatchState, now_ms: int) -> list[PieceType]:
-        options = get_wave_options(now_ms, state.started_at)
+        options = get_wave_options(now_ms, state.started_at, state)
         unlocked = UnlockService.get_unlocked_kinds(player, state)
         return sorted(options - unlocked, key=lambda x: x.value)
 
@@ -36,7 +36,7 @@ class UnlockService:
     def choose_unlock(player: int, kind: PieceType, state: MatchState, now_ms: int) -> tuple[bool, str]:
         if state.status != MatchStatus.RUNNING:
             return False, "match not running"
-        idx = get_current_wave_index(now_ms, state.started_at)
+        idx = get_current_wave_index(now_ms, state.started_at, state)
         if idx < 0:
             return False, "unlock window not open"
         if UnlockService.has_player_chosen_wave(player, idx, state):
@@ -56,7 +56,7 @@ class UnlockService:
         processed = state.auto_unlock_processed_waves.setdefault(player, set())
         if wave in processed:
             return
-        options = sorted(get_wave_options_by_index(wave) - UnlockService.get_unlocked_kinds(player, state), key=lambda k: k.value)
+        options = sorted(get_wave_options_by_index(wave, state) - UnlockService.get_unlocked_kinds(player, state), key=lambda k: k.value)
         pick = next((k for k in AUTO_UNLOCK_PRIORITY if k in options), None)
         if pick is None:
             pick = PieceType.SOLDIER
@@ -81,8 +81,9 @@ class UnlockService:
             UnlockService.lock_full_unlock_at_130(state, now_ms)
             return
 
-        for wave in range(4):
-            if not is_wave_timeout(now_ms, state.started_at, wave):
+        wave_count = len(state.custom_unlock_windows or [50, 70, 90, 110])
+        for wave in range(wave_count):
+            if not is_wave_timeout(now_ms, state.started_at, wave, state):
                 continue
             for player in (1, 2):
                 UnlockService.apply_auto_unlock_for_wave(player, wave, state, now_ms)
