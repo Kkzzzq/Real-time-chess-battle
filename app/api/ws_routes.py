@@ -5,7 +5,7 @@ import time
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
-from app.api.deps import get_container
+from app.api.deps import get_ws_container
 from app.domain.enums import MatchStatus, PieceType
 from app.engine.snapshot import build_match_snapshot
 
@@ -14,7 +14,7 @@ router = APIRouter(tags=["ws"])
 
 @router.websocket("/matches/{match_id}/ws")
 @router.websocket("/ws/matches/{match_id}")
-async def ws_match(websocket: WebSocket, match_id: str, container=Depends(get_container)):
+async def ws_match(websocket: WebSocket, match_id: str, container=Depends(get_ws_container)):
     state = container.repo.get_match(match_id)
     if state is None:
         await websocket.accept()

@@ -58,6 +58,12 @@ def build_piece_snapshot(state: MatchState, piece: Piece, now_ms: int) -> dict:
         "cooldown_remaining_ms": remain_cd,
         "can_command": disabled_reason is None,
         "disabled_reason": disabled_reason,
+        "can_command_scope": "owner_view",
+        "commandability": {
+            "owner_can_command": disabled_reason is None,
+            "owner_disabled_reason": disabled_reason,
+            "note": "can_command is evaluated from piece owner's view; viewer permission must still check player identity.",
+        },
         "runtime_cells": runtime_cells,
         "segment": {
             "index": seg["segment_index"],
