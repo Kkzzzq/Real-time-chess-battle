@@ -3,6 +3,11 @@ import { useMatchStore } from '../store/matchStore'
 
 const WS_BASE = import.meta.env.VITE_WS_BASE_URL || 'ws://127.0.0.1:8000'
 
+/**
+ * WS auth strategy:
+ * - player_token is validated at connection handshake via query string.
+ * - command frames then carry player_id only (backend binds frame player_id to connection player_id).
+ */
 export class MatchWsClient {
   private ws?: WebSocket
   private heartbeat?: number
@@ -26,8 +31,30 @@ export class MatchWsClient {
     this.ws.onmessage = (evt) => {
       useWsStore.getState().setState({ lastMessageTs: Date.now() })
       const frame = JSON.parse(evt.data) as { type: string; data: any }
-      if (frame.type === 'snapshot') useMatchStore.getState().setSnapshot(frame.data)
-      if (frame.type === 'error') useWsStore.getState().setState({ error: frame.data?.message || 'ws error' })
+      switch (frame.type) {
+        case 'subscribed':
+          useMatchStore.getState().setSubscribedMeta(frame.data)
+          break
+        case 'snapshot':
+          useMatchStore.getState().setSnapshot(frame.data)
+          break
+        case 'event':
+          useMatchStore.getState().pushEvents([frame.data])
+          break
+        case 'events':
+          useMatchStore.getState().pushEvents(frame.data?.events || [])
+          break
+        case 'command_result':
+          useMatchStore.getState().setCommandResult(frame.data)
+          break
+        case 'pong':
+          break
+        case 'error':
+          useWsStore.getState().setState({ error: frame.data?.message || 'ws error' })
+          break
+        default:
+          break
+      }
     }
   }
   disconnect() { if (this.reconnectTimer) clearTimeout(this.reconnectTimer); if (this.heartbeat) clearInterval(this.heartbeat); this.ws?.close() }

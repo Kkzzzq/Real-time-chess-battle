@@ -1,11 +1,8 @@
 # Real-time Chess Battle
 
-现在仓库包含：
-- 后端（FastAPI + WebSocket）
-- 正式前端（React + TypeScript + Vite，目录 `frontend/`）
-- 示例脚本（`examples/`）
+仓库现在包含后端 + 正式前端 + 基础 CI。
 
-## 1) 启动方式
+## 运行
 
 ### 后端
 ```bash
@@ -21,79 +18,63 @@ cp .env.example .env
 npm run dev
 ```
 
-默认联调地址：
-- API: `http://127.0.0.1:8000`
-- WS: `ws://127.0.0.1:8000`
+前端路由：
+- `/`
+- `/room/:matchId`
+- `/game/:matchId`
 
-## 2) 前端功能落地
+## 鉴权模型（对局级）
 
-`frontend/` 已提供：
-- 页面流：大厅 -> 房间 -> 对局
-- 棋盘组件：9x10 网格、棋子渲染、可行动作高亮
-- API Client：`matchApi / commandApi / queryApi`
-- WS Client：连接、心跳、断线重连、snapshot 消费
-- 状态管理（Zustand）：session / room / match / ws / ui
-- Session 持久化：本地保存 `player_id/player_token/match_id`
-- 前端测试（Vitest）：store + board 组件基础测试
+`join` 返回 `player_id + player_token`。后续：
+- HTTP 命令/查询 viewer 需要 `player_token`
+- WS 连接通过 query string 做 token 校验
 
-## 3) 身份与鉴权（已生效）
+WS 命令帧策略：
+- 连接时校验 token
+- 后续命令帧只带 `player_id`（服务端校验与连接身份一致）
 
-`join` 会返回：
-- `player_id`
-- `player_token`
+当前 `player_token` 带过期时间（默认 24h，可用 `PLAYER_TOKEN_TTL_SECONDS` 配置）。
 
-之后：
-- `ready/leave/commands/state(viewer)/legal-moves(viewer)/ws` 都需要 `player_token`
-- 新增 `POST /matches/{match_id}/reconnect`，可恢复 `online=true`
-
-## 4) 房规与规则
+## 房规
 
 `POST /matches` 支持：
-- `ruleset_name`（当前只允许 `standard`）
+- `ruleset_name`（当前只支持 `standard`）
 - `allow_draw`
 - `tick_ms`
 - `custom_unlock_windows`
 
-`custom_unlock_windows` 现已真实驱动：
-- phase wave 判定
-- unlock window 判定
-- auto unlock 判定
-- snapshot 中 next wave 计算
+`custom_unlock_windows` 已真实驱动 phase/unlock/snapshot next wave。
 
-## 5) API 语义更新
+## 前端功能
 
-- `legal-moves`:
-  - `static.targets` 始终返回
-  - `actionable` 仅在提供 viewer 身份时返回；否则为 `null`
-- `query_routes` 纯查询（不再隐式推进状态）
-- `command_routes` 仅执行命令（不再额外 reconcile）
-- running 状态推进由 `tick_loop` + `match_service.tick_once_with_events` 统一负责
+- 正式路由 + URL 可分享
+- Lobby 明确 join 流程
+- Room 实时轮询状态（含 running 自动跳转 game）
+- Game 展示 phase/unlock/events/piece commandability/cooldown
+- Unlock 面板可直接调用 unlock 命令
+- 结算态 UI（winner/reason + 返回大厅/房间）
+- Board 消费 `runtime_board`，并用 `display_x/display_y` 渲染浮动棋子层
+- reconnect 业务流（页面进入先 `reconnect`，失败清 session 回大厅）
 
-## 6) runtime_board 消费规则
+## 持久化
 
-`runtime_board.cells[y][x]`：
-- `occupants`: 当前格全部占用者（moving 优先）
-- `primary_occupant`: 当前格主显示占用者（按 `moving` 优先 + `piece_id` 排序）
+支持两种 repo 装配：
+- `MATCH_REPO_BACKEND=memory`（默认）
+- `MATCH_REPO_BACKEND=pickle`（磁盘持久化，路径 `MATCH_REPO_PICKLE_PATH`）
 
-前端推荐：
-- 交互合法性基于 API（`legal-moves`）
-- 主展示优先 `runtime_board` + `pieces.display_x/display_y`
-- 规则核对可查看 `board`
+## 工程脚本
 
-## 7) 测试
+根目录 `package.json`：
+- `dev:backend`
+- `dev:frontend`
+- `test:backend`
+- `test:frontend`
+- `test:all`
+- `build:frontend`
+- `build:all`
 
-后端：
-```bash
-pytest -q
-```
+## CI
 
-前端：
-```bash
-cd frontend
-npm test
-```
-
-## 8) 示例脚本与前端关系
-
-- `examples/` 仅用于后端调试/联调脚本
-- 正式产品交互请使用 `frontend/`
+`.github/workflows/ci.yml` 已包含：
+- backend: pytest
+- frontend: typecheck + test + build

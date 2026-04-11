@@ -18,11 +18,11 @@ from app.engine.phase import compute_phase
 from app.engine.snapshot import build_match_snapshot
 from app.engine.timeline import advance_all_pieces, finish_move
 from app.engine.unlock_service import UnlockService
-from app.repository.memory_repo import MemoryRepo
+from app.repository.base import MatchRepo
 
 
 class MatchService:
-    def __init__(self, repo: MemoryRepo) -> None:
+    def __init__(self, repo: MatchRepo) -> None:
         self.repo = repo
 
     def tick_once(self, match_id: str, now_ms: int | None = None) -> dict | None:

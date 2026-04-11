@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import secrets
 import time
 import uuid
@@ -17,11 +18,13 @@ from app.domain.events import (
 )
 from app.domain.models import MatchState
 from app.engine.board_setup import create_standard_board
-from app.repository.memory_repo import MemoryRepo
+from app.repository.base import MatchRepo
 
+
+TOKEN_TTL_SECONDS = int(os.getenv("PLAYER_TOKEN_TTL_SECONDS", "86400"))
 
 class RoomService:
-    def __init__(self, repo: MemoryRepo) -> None:
+    def __init__(self, repo: MatchRepo) -> None:
         self.repo = repo
 
     def create_match(
@@ -69,9 +72,11 @@ class RoomService:
         seat = 1 if 1 not in state.players else 2
         if seat in state.players:
             raise ValueError("match full")
+        expires_at = now_ms + TOKEN_TTL_SECONDS * 1000
         player = {
             "player_id": uuid.uuid4().hex[:8],
             "player_token": secrets.token_urlsafe(24),
+            "player_token_expires_at": expires_at,
             "name": player_name,
             "ready": False,
             "online": True,
