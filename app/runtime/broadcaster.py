@@ -43,3 +43,9 @@ class Broadcaster:
             return
         if match_id in self._sockets and not self._sockets[match_id]:
             self._sockets.pop(match_id, None)
+
+    def active_matches(self) -> int:
+        return len(self._sockets)
+
+    def active_connections(self) -> int:
+        return sum(len(v) for v in self._sockets.values())

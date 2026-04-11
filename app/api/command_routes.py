@@ -4,9 +4,9 @@ import time
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from app.api.auth import require_player_auth
 from app.api.deps import get_container
 from app.api.schemas import CommandResultResponse, MoveCommandRequest, ResignRequest, UnlockCommandRequest
-from app.domain.enums import MatchStatus
 from app.engine.snapshot import build_match_snapshot
 
 router = APIRouter(prefix="/matches/{match_id}/commands", tags=["commands"])
@@ -30,12 +30,6 @@ def _snapshot_or_404(container, match_id: str, now_ms: int, player_id: str | Non
     return build_match_snapshot(state, now_ms, viewer_seat=viewer_seat)
 
 
-def _reconcile_before_command(container, match_id: str, now_ms: int) -> None:
-    state = _state_or_404(container, match_id)
-    if state.status != MatchStatus.RUNNING:
-        container.match_service.tick_once(match_id, now_ms)
-
-
 def _raise_for_command_error(msg: str) -> None:
     if msg == "match not found":
         raise HTTPException(status_code=404, detail=msg)
@@ -51,7 +45,8 @@ def _raise_for_command_error(msg: str) -> None:
 @router.post("/move", response_model=CommandResultResponse)
 def move(match_id: str, payload: MoveCommandRequest, container=Depends(get_container)):
     now_ms = int(time.time() * 1000)
-    _reconcile_before_command(container, match_id, now_ms)
+    state = _state_or_404(container, match_id)
+    require_player_auth(state, payload.player_id, payload.player_token)
     ok, msg = container.command_service.handle_move_command(
         match_id,
         payload.player_id,
@@ -67,7 +62,8 @@ def move(match_id: str, payload: MoveCommandRequest, container=Depends(get_conta
 @router.post("/unlock", response_model=CommandResultResponse)
 def unlock(match_id: str, payload: UnlockCommandRequest, container=Depends(get_container)):
     now_ms = int(time.time() * 1000)
-    _reconcile_before_command(container, match_id, now_ms)
+    state = _state_or_404(container, match_id)
+    require_player_auth(state, payload.player_id, payload.player_token)
     ok, msg = container.command_service.handle_unlock_command(match_id, payload.player_id, payload.kind, now_ms)
     if not ok:
         _raise_for_command_error(msg)
@@ -77,7 +73,8 @@ def unlock(match_id: str, payload: UnlockCommandRequest, container=Depends(get_c
 @router.post("/resign", response_model=CommandResultResponse)
 def resign(match_id: str, payload: ResignRequest, container=Depends(get_container)):
     now_ms = int(time.time() * 1000)
-    _reconcile_before_command(container, match_id, now_ms)
+    state = _state_or_404(container, match_id)
+    require_player_auth(state, payload.player_id, payload.player_token)
     ok, msg = container.command_service.handle_resign_command(match_id, payload.player_id, now_ms)
     if not ok:
         _raise_for_command_error(msg)
